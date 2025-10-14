@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { accordion, chevronRotate, listContainer, listItem } from '@/components/animations/variants';
 
 type FAQItem = {
   question: string;
@@ -63,44 +65,75 @@ export default function FAQPage() {
   return (
     <div className="min-h-screen py-12 bg-cream-50">
       <div className="max-w-3xl mx-auto px-4">
-        <h1 className="text-4xl font-bold text-center text-charcoal-300 mb-12">
+        <motion.h1 
+          className="text-4xl font-bold text-center text-charcoal-300 mb-12"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           Frequently Asked Questions
-        </h1>
+        </motion.h1>
 
-        <div className="space-y-4">
+        <motion.div 
+          className="space-y-4"
+          variants={listContainer}
+          initial="initial"
+          animate="animate"
+        >
           {faqs.map((faq, index) => (
-            <div
+            <motion.div
               key={index}
               className="bg-white rounded-lg shadow-sm overflow-hidden"
+              variants={listItem}
+              whileHover={{ scale: 1.01 }}
+              transition={{ duration: 0.2 }}
             >
               <button
-                className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-cream-50"
+                className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-cream-50 transition-colors"
                 onClick={() => toggleItem(index)}
               >
                 <span className="font-semibold text-charcoal-300">{faq.question}</span>
-                {openItems.includes(index) ? (
-                  <ChevronUp className="w-5 h-5 text-sage-400" />
-                ) : (
+                <motion.div
+                  variants={chevronRotate}
+                  animate={openItems.includes(index) ? 'expanded' : 'collapsed'}
+                  transition={{ duration: 0.3 }}
+                >
                   <ChevronDown className="w-5 h-5 text-sage-400" />
-                )}
+                </motion.div>
               </button>
-              {openItems.includes(index) && (
-                <div className="px-6 py-4 border-t border-cream-100">
-                  <p className="text-charcoal-300">{faq.answer}</p>
-                </div>
-              )}
-            </div>
+              <AnimatePresence initial={false}>
+                {openItems.includes(index) && (
+                  <motion.div
+                    variants={accordion}
+                    initial="collapsed"
+                    animate="expanded"
+                    exit="collapsed"
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-6 py-4 border-t border-cream-100">
+                      <p className="text-charcoal-300">{faq.answer}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="mt-12 text-center">
+        <motion.div 
+          className="mt-12 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
           <p className="text-charcoal-300">
             Still have questions?{" "}
             <a href="mailto:support@chartedart.co.za" className="text-sage-400 hover:text-sage-500 font-semibold">
               Contact our support team
             </a>
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
