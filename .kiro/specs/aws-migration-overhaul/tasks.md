@@ -155,14 +155,18 @@
   - Configure JWT authorizer
 
 
+
   - _Requirements: 6.1_
 
 - [ ]* 9.3 Create Stripe webhook handler
   - Create `backend/src/handlers/stripe-webhook.js`
+
+
   - Verify webhook signature
   - Handle payment success and failure events
   - Update order status in database
   - _Requirements: 6.5_
+
 
 - [ ] 10. Create Frontend API Client Layer
 - [ ] 10.1 Create base API client
