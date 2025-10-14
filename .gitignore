@@ -78,4 +78,4 @@ ehthumbs.db
 *.swp
 
 # Vercel deployment files
-.vercel
+.vercelCON
