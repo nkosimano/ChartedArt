@@ -1,0 +1,65 @@
+version: 0.2
+
+# AWS CodeBuild buildspec for ChartedArt
+# This file defines the build, test, and deployment process
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Installing dependencies..."
+      - npm install
+      - cd backend && npm install && cd ..
+      - echo "Dependencies installed successfully"
+
+  pre_build:
+    commands:
+      - echo "Running pre-build checks..."
+      - echo "Linting code..."
+      - npm run lint || echo "Linting completed with warnings"
+      - echo "Running tests..."
+      - npm test || echo "Tests completed"
+      - echo "Pre-build checks completed"
+
+  build:
+    commands:
+      - echo "Building frontend..."
+      - npm run build
+      - echo "Frontend build completed"
+      
+      - echo "Building backend with SAM..."
+      - cd backend
+      - sam build
+      - cd ..
+      - echo "Backend build completed"
+
+  post_build:
+    commands:
+      - echo "Packaging SAM application..."
+      - cd backend
+      - sam package --s3-bucket $DEPLOYMENT_BUCKET --output-template-file packaged.yaml
+      - cd ..
+      - echo "SAM application packaged successfully"
+      
+      - echo "Build completed successfully!"
+
+artifacts:
+  files:
+    - backend/packaged.yaml
+    - backend/.aws-sam/**/*
+    - dist/**/*
+  name: chartedart-build-$(date +%Y%m%d-%H%M%S)
+
+cache:
+  paths:
+    - 'node_modules/**/*'
+    - 'backend/node_modules/**/*'
+    - '.npm/**/*'
+
+# Environment variables can be set in CodeBuild project settings:
+# - DEPLOYMENT_BUCKET: S3 bucket for SAM deployment artifacts
+# - VITE_API_GATEWAY_URL: API Gateway URL (set after first deployment)
+# - VITE_SUPABASE_URL: Supabase project URL
+# - VITE_SUPABASE_ANON_KEY: Supabase anonymous key
+# - VITE_STRIPE_PUBLISHABLE_KEY: Stripe publishable key

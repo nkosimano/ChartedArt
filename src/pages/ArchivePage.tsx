@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
-import { supabaseAdmin } from '@/lib/supabase/admin-client';
+import { api, APIError } from '@/lib/api/client';
 import { CheckCircle, XCircle, Truck, Package, AlertTriangle, Archive, History, ChevronDown } from 'lucide-react';
 import type { Database } from '@/lib/supabase/types';
 
@@ -59,35 +59,32 @@ export default function ArchivePage() {
 
         setIsAdmin(true);
 
-        const { data: ordersData, error: ordersError } = await supabaseAdmin
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              *,
-              products (*)
-            ),
-            profiles (*)
-          `)
-          .eq('status', 'archived')
-          .order('updated_at', { ascending: false });
-
-        if (ordersError) {
-          throw ordersError;
-        }
+        // Use new API client to fetch archived orders
+        const response = await api.orders.list({ status: 'archived' });
 
         // Store original statuses before they were archived
-        ordersData?.forEach(order => {
+        response.orders?.forEach(order => {
           const metadata = order.metadata as { previousStatus?: string } | null;
           if (metadata?.previousStatus) {
             originalStatuses.set(order.id, metadata.previousStatus);
           }
         });
 
-        setOrders(ordersData || []);
+        setOrders(response.orders || []);
       } catch (err) {
         console.error('Error in archive page:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch archived orders');
+        
+        if (err instanceof APIError) {
+          if (err.status === 401 || err.status === 403) {
+            setError('Access denied. Admin privileges required.');
+            setIsAdmin(false);
+            navigate('/');
+            return;
+          }
+          setError(err.message);
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to fetch archived orders');
+        }
       } finally {
         setLoading(false);
       }
@@ -121,21 +118,27 @@ export default function ArchivePage() {
       // Get the original status or default to 'delivered'
       const statusToRestore = originalStatuses.get(orderId) || 'delivered';
 
-      const { error: updateError } = await supabaseAdmin
-        .from('orders')
-        .update({ 
-          status: statusToRestore,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      if (updateError) throw updateError;
+      // Use new API client to update status
+      // TODO: Create dedicated /admin/orders/{id}/unarchive endpoint for better semantics
+      await api.orders.update(orderId, { 
+        status: statusToRestore,
+        notes: `Unarchived and restored to status: ${statusToRestore}`
+      });
 
       setOrders(orders.filter(order => order.id !== orderId));
 
     } catch (err) {
       console.error('Error unarchiving order:', err);
-      setError(err instanceof Error ? err.message : 'Failed to unarchive order');
+      
+      if (err instanceof APIError) {
+        if (err.status === 401 || err.status === 403) {
+          setError('Access denied. Admin privileges required.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to unarchive order');
+      }
     } finally {
       setUnarchivingOrder(null);
     }
