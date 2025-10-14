@@ -1,11 +1,13 @@
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, User, Menu, X, Settings, Archive, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import ContactDialog from '@/components/ContactDialog';
 import { useCart } from '@/contexts/CartContext';
 
 export default function RootLayout() {
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -242,9 +244,18 @@ export default function RootLayout() {
         </div>
       </header>
 
-      <main className="min-h-screen">
-        <Outlet />
-      </main>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.main
+          key={location.pathname}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 50 }}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+          className="min-h-screen"
+        >
+          <Outlet />
+        </motion.main>
+      </AnimatePresence>
 
       <footer className="bg-charcoal-300 text-cream-100 py-12">
         <div className="max-w-7xl mx-auto px-4">

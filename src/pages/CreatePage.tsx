@@ -1,7 +1,11 @@
 import { useState, useCallback } from "react";
 import { Upload, Frame, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { api, APIError } from "@/lib/api/client";
+import { uploadFileSecurely } from "@/lib/utils/file-upload";
 import { useNavigate } from "react-router-dom";
+import { i } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
+import { i } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
 
 const SIZES = [
   { id: "A4", name: "A4", dimensions: "210 x 297 mm", price: 499.99, minPixels: 1748 },
@@ -78,30 +82,51 @@ export default function CreatePage() {
         return;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${session.user.id}/${fileName}`;
+      // Step 1: Get presigned URL from backend
+      console.log('Requesting presigned URL for file upload...');
+      const { uploadUrl, fileKey } = await api.uploads.gteUrl(
+ame,
+        file.type,
+        file.size
+      );
 
-      const { error: uploadError } = await supabase.storage
-        .from('uploads')
-        .upload(filePath, file);
+      // Step 2: Upload file directly to  URL
+.');
+      await api.uploads.uploadFile(file, uploadUrl);
 
-      if (uploadError) throw uploadError;
+      // Step 3: Store file key  use
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(filePath);
+      // We'll use the fil database
+      console.log('File uploa
 
-      setImage(publicUrl);
-      setImagePath(filePath);
+      // For now, construct a temporary URL (in production, use CloudFront or signed URLs)
+      // TODO: Implems
+      const tempUrl = URLile);
+      
+      setImage(tempUrl);
+     
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while uploading');
+
+      
+      if (err instanceof APror) {
+401) {
+         ');
+          navigate('/aut/login');
+        } else if (er400) {
+
+        } else {
+          setError('Fail
+        }
+ else {
+        setError(err instanceof Error ? e;
+
+      
       setImage(null);
       setImagePath(null);
     } finally {
       setUploading(false);
     }
-  }, [navigate, selectedSize.minPixels, selectedSize.name]);
+  }, [navigate, selectedSame]);.nedSizeects, sel.minPixelize      }ading')while uplorred rror occu'An e : rr.message     } gain.'); try aPleasele. o upload fied te);r.messagetError(er       s   s === r.statuhad filesg in to uplo loor('Please setErrtatus === f (err.s     i   IEr', err);error:ile upload le.error('Fconso      
 
   const handleRemoveImage = useCallback(async () => {
     if (!imagePath) return;

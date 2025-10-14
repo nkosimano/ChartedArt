@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   PaymentElement,
   useStripe,
@@ -7,6 +7,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import type { Stripe } from '@stripe/stripe-js';
+import { api, APIError } from '@/lib/api/client';
 
 const stripePromise = loadStripe('pk_test_51OxKHqKDfQVHkTp0nPxPtGZqKzHfDGVZtfQZqhA5RzMBPQdkjY8zH2qWYZH7vKjJ3q4X9Y6X8Y6X8Y6X8Y6X8Y6X8');
 
@@ -78,27 +79,27 @@ export function PaymentFormWrapper({ amount, onSuccess }: { amount: number; onSu
   useEffect(() => {
     const initializePayment = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({ amount }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        setClientSecret(data.clientSecret);
+        console.log('Initializing payment intent for amount:', amount);
+        
+        // Use secure API client to create payment intent
+        const response = await api.payments.createIntent(amount);
+        
+        console.log('Payment intent created successfully');
+        setClientSecret(response.clientSecret);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to initialize payment');
+        console.error('Payment initialization error:', err);
+        
+        if (err instanceof APIError) {
+          if (err.status === 401) {
+            setError('Please log in to make a payment');
+          } else if (err.status === 400) {
+            setError(err.message || 'Invalid payment amount');
+          } else {
+            setError('Failed to initialize payment. Please try again.');
+          }
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to initialize payment');
+        }
       }
     };
 
