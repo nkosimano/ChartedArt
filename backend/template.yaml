@@ -343,6 +343,7 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${CreatePaymentIntentFunction}'
       RetentionInDays: 30
 
+<<<<<<< HEAD
   # Lambda Function: Register Push Token
   RegisterPushTokenFunction:
     Type: AWS::Serverless::Function
@@ -367,6 +368,8 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${RegisterPushTokenFunction}'
       RetentionInDays: 30
 
+=======
+>>>>>>> e4002856974d5c66721f668a6fc291ee96224278
 # Outputs for easy reference
 Outputs:
   ApiGatewayUrl:

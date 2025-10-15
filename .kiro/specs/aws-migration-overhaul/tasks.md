@@ -505,7 +505,10 @@
   - Add `api.gallery.unlike()` method
   - Add `api.gallery.filter()` method
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e4002856974d5c66721f668a6fc291ee96224278
   - _Requirements: 5.1_
 
 - [ ] 23.4 Update GalleryPage with animations

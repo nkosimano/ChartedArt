@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
+import { api, APIError } from '@/lib/api/client';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { CreditCard, Wallet } from 'lucide-react';
 import type { Database } from '@/lib/supabase/types';
@@ -96,54 +97,52 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          user_id: session.user.id,
-          status: 'pending',
-          shipping_address: address,
-          total_amount: totalAmount,
-          payment_reference: `CASH-${Date.now()}`
-        }])
-        .select()
-        .single();
+      // Prepare order data
+      const orderData = {
+        items: items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity || 1,
+          customization: {
+            image_url: item.image_url,
+            price: item.price
+          }
+        })),
+        shipping_address: {
+          street: address.street,
+          city: address.city,
+          state: address.province,
+          zip: address.postal_code,
+          country: 'South Africa'
+        },
+        payment_method: 'cash' as const
+      };
 
-      if (orderError) throw orderError;
+      // Create order using secure API
+      console.log('Creating order via API...');
+      const response = await api.orders.create(orderData);
 
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        image_url: item.image_url,
-        quantity: item.quantity,
-        price: item.price
-      }));
+      console.log('Order created successfully:', response.order.id);
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      // Navigate to confirmation page
+      navigate('/order-confirmation', { 
+        state: { orderId: response.order.id } 
+      });
 
-      if (itemsError) throw itemsError;
-
-      // Clear cart
-      const { data: cart } = await supabase
-        .from('carts')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .single();
-
-      if (cart) {
-        await supabase
-          .from('cart_items')
-          .delete()
-          .eq('cart_id', cart.id);
-      }
-
-      navigate('/order-confirmation');
     } catch (err) {
       console.error('Error processing order:', err);
-      setError(err instanceof Error ? err.message : 'Failed to place order');
+      
+      if (err instanceof APIError) {
+        if (err.status === 401) {
+          setError('Please log in to place an order');
+          navigate('/auth/login');
+        } else if (err.status === 400) {
+          setError(err.message || 'Invalid order data. Please check your cart and try again.');
+        } else {
+          setError('Failed to place order. Please try again.');
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to place order');
+      }
     } finally {
       setSubmitting(false);
     }

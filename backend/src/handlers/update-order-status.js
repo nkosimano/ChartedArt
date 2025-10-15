@@ -1,15 +1,21 @@
 const { createClient } = require('@supabase/supabase-js');
 const { verifyAdmin, errorResponse, successResponse } = require('../utils/auth');
+<<<<<<< HEAD
 const fetch = require('node-fetch');
+=======
+>>>>>>> e4002856974d5c66721f668a6fc291ee96224278
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 
+<<<<<<< HEAD
 // Expo Push Notification API endpoint
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
+=======
+>>>>>>> e4002856974d5c66721f668a6fc291ee96224278
 // Valid order statuses
 const VALID_STATUSES = [
   'pending',
@@ -22,6 +28,7 @@ const VALID_STATUSES = [
 ];
 
 /**
+<<<<<<< HEAD
  * Send push notification to user via Expo Push API
  */
 const sendPushNotification = async (pushToken, title, body, data = {}) => {
@@ -118,6 +125,8 @@ const getNotificationMessage = (status, orderId) => {
 };
 
 /**
+=======
+>>>>>>> e4002856974d5c66721f668a6fc291ee96224278
  * Update order status (Admin only)
  * 
  * @param {Object} event - API Gateway event
@@ -197,6 +206,7 @@ exports.handler = async (event) => {
 
     console.log(`Order ${orderId} updated successfully to status: ${status}`);
 
+<<<<<<< HEAD
     // Send push notification if status changed and user has push token
     if (existingOrder.status !== status) {
       const { data: profile } = await supabase
@@ -222,6 +232,8 @@ exports.handler = async (event) => {
       }
     }
 
+=======
+>>>>>>> e4002856974d5c66721f668a6fc291ee96224278
     // TODO: Send email notification to customer about status change
     // await sendOrderStatusEmail(updatedOrder);
 

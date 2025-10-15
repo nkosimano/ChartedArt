@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/client';
-import { supabaseAdmin } from '@/lib/supabase/admin-client';
+import { api, APIError } from '@/lib/api/client';
 import { CheckCircle, XCircle, Truck, Package, AlertTriangle, Archive, ChevronDown } from 'lucide-react';
 import type { Database } from '@/lib/supabase/types';
 
@@ -59,27 +59,23 @@ export default function AdminOrdersPage() {
 
         setIsAdmin(true);
 
-        const { data: ordersData, error: ordersError } = await supabaseAdmin
-          .from('orders')
-          .select(`
-            *,
-            profiles (id, full_name, email),
-            order_items (
-              *,
-              products (*)
-            )
-          `)
-          .not('status', 'eq', 'archived')
-          .order('created_at', { ascending: false });
-
-        if (ordersError) {
-          throw ordersError;
-        }
-
-        setOrders(ordersData || []);
+        // Use new API client instead of supabaseAdmin
+        const response = await api.orders.list();
+        setOrders(response.orders || []);
       } catch (err) {
         console.error('Error in admin page:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+        
+        if (err instanceof APIError) {
+          if (err.status === 401 || err.status === 403) {
+            setError('Access denied. Admin privileges required.');
+            setIsAdmin(false);
+            navigate('/');
+            return;
+          }
+          setError(err.message);
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+        }
       } finally {
         setLoading(false);
       }
@@ -110,16 +106,10 @@ export default function AdminOrdersPage() {
       setUpdatingOrder(orderId);
       setError(null);
 
-      const { error: updateError } = await supabaseAdmin
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
+      // Use new API client instead of supabaseAdmin
+      const response = await api.orders.update(orderId, { status: newStatus });
 
-      if (updateError) throw updateError;
-
+      // Optimistic UI update
       setOrders(orders.map(order => 
         order.id === orderId ? {
           ...order,
@@ -135,7 +125,16 @@ export default function AdminOrdersPage() {
 
     } catch (err) {
       console.error('Error updating order status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update order status');
+      
+      if (err instanceof APIError) {
+        if (err.status === 401 || err.status === 403) {
+          setError('Access denied. Admin privileges required.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to update order status');
+      }
     } finally {
       setUpdatingOrder(null);
     }
@@ -152,26 +151,27 @@ export default function AdminOrdersPage() {
         throw new Error('Order not found');
       }
 
-      const { error: updateError } = await supabaseAdmin
-        .from('orders')
-        .update({ 
-          status: 'archived', 
-          updated_at: new Date().toISOString(),
-          metadata: {
-            previousStatus: order.status,
-            archivedAt: new Date().toISOString()
-          }
-        })
-        .eq('id', orderId);
-
-      if (updateError) throw updateError;
+      // Use new API client to update status to archived
+      await api.orders.update(orderId, { 
+        status: 'archived',
+        notes: `Archived from status: ${order.status}`
+      });
 
       // Remove the archived order from the list
       setOrders(orders.filter(order => order.id !== orderId));
 
     } catch (err) {
       console.error('Error archiving order:', err);
-      setError(err instanceof Error ? err.message : 'Failed to archive order');
+      
+      if (err instanceof APIError) {
+        if (err.status === 401 || err.status === 403) {
+          setError('Access denied. Admin privileges required.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to archive order');
+      }
     } finally {
       setArchivingOrder(null);
     }
