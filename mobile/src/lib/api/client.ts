@@ -1,7 +1,16 @@
 import * as SecureStore from 'expo-secure-store';
 import NetInfo from '@react-native-community/netinfo';
+import { 
+  mockUser, 
+  mockCartItems, 
+  mockOrders, 
+  mockOrderDetail, 
+  mockGalleryItems 
+} from './mockData';
+import { APP_CONFIG, shouldUseMockData, shouldEnableLogging } from '../../config/app';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://your-api-gateway-url.amazonaws.com/prod';
+const API_BASE_URL = APP_CONFIG.API_BASE_URL;
+const USE_MOCK_DATA = shouldUseMockData();
 
 interface RequestConfig {
   headers?: Record<string, string>;
@@ -34,6 +43,11 @@ class APIClient {
     method: string,
     config?: RequestConfig
   ): Promise<T> {
+    // Use mock data if backend is not available
+    if (USE_MOCK_DATA) {
+      return this.getMockResponse<T>(endpoint, method, config?.body);
+    }
+
     // Check network connectivity
     const isConnected = await this.checkNetworkStatus();
     if (!isConnected) {
@@ -115,7 +129,75 @@ class APIClient {
     return this.request<T>(endpoint, 'DELETE', config);
   }
 
+  private async getMockResponse<T>(endpoint: string, method: string, body?: any): Promise<T> {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    if (shouldEnableLogging()) {
+      console.log(`[MOCK API] ${method} ${endpoint}`, body);
+    }
+
+    // Mock responses based on endpoint
+    switch (endpoint) {
+      case '/profile':
+        return mockUser as T;
+      
+      case '/cart':
+        if (method === 'GET') {
+          return { items: mockCartItems } as T;
+        }
+        if (method === 'POST') {
+          return { success: true, message: 'Item added to cart' } as T;
+        }
+        break;
+      
+      case '/orders':
+        if (method === 'GET') {
+          return { orders: mockOrders } as T;
+        }
+        if (method === 'POST') {
+          return { id: 'new-order-123', success: true } as T;
+        }
+        break;
+      
+      case '/gallery':
+        return { items: mockGalleryItems } as T;
+      
+      case '/generate-upload-url':
+        return {
+          uploadUrl: 'https://mock-s3-url.com/upload',
+          imageKey: 'mock-image-key',
+          imageUrl: `https://picsum.photos/400/300?random=${Date.now()}`
+        } as T;
+      
+      case '/create-payment-intent':
+        return {
+          clientSecret: 'pi_mock_client_secret',
+          ephemeralKey: 'ek_mock_ephemeral_key',
+          customer: 'cus_mock_customer'
+        } as T;
+      
+      default:
+        if (endpoint.startsWith('/orders/')) {
+          return mockOrderDetail as T;
+        }
+        if (endpoint.startsWith('/cart/')) {
+          return { success: true } as T;
+        }
+        return { success: true, message: 'Mock response' } as T;
+    }
+
+    return { success: true } as T;
+  }
+
   async uploadImage(uri: string, presignedUrl: string): Promise<void> {
+    if (USE_MOCK_DATA) {
+      // Mock upload - just wait a bit
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('[MOCK API] Image upload simulated');
+      return;
+    }
+
     try {
       const response = await fetch(uri);
       const blob = await response.blob();

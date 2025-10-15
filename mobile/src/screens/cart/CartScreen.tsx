@@ -4,7 +4,7 @@
  * Display cart items with ability to remove and proceed to checkout
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -13,19 +13,28 @@ import {
     TouchableOpacity,
     Image,
     Alert,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useCart } from '@/hooks/useCart';
-import { Button, LoadingSpinner, Card } from '@/components/common';
-import { colors } from '@/constants/colors';
-import { typography } from '@/constants/typography';
-import { spacing } from '@/constants/spacing';
-import { CartItem } from '@/types';
+import { useCart, CartItem } from '../../hooks/useCart';
+import Button from '../../components/common/Button';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Card from '../../components/common/Card';
+import { COLORS } from '../../constants/colors';
+import { TYPOGRAPHY } from '../../constants/typography';
+import { SPACING } from '../../constants/spacing';
 
 export default function CartScreen() {
     const navigation = useNavigation();
-    const { cartItems, loading, removeItem, updateQuantity, totalAmount, itemCount } = useCart();
+    const { cartItems, loading, error, fetchCart, removeItem, updateQuantity, totalAmount, itemCount } = useCart();
+    const [refreshing, setRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchCart();
+        setRefreshing(false);
+    };
 
     const handleRemoveItem = (itemId: string, itemName: string) => {
         Alert.alert(
@@ -121,6 +130,13 @@ export default function CartScreen() {
                 renderItem={renderCartItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={COLORS.primary}
+                    />
+                }
                 ListFooterComponent={
                     <View style={styles.footer}>
                         <View style={styles.totalContainer}>
@@ -142,135 +158,135 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: COLORS.background,
     },
     listContent: {
-        padding: spacing.md,
+        padding: SPACING.md,
     },
     cartItem: {
-        marginBottom: spacing.md,
+        marginBottom: SPACING.md,
     },
     itemContent: {
         flexDirection: 'row',
-        marginBottom: spacing.sm,
+        marginBottom: SPACING.sm,
     },
     itemImage: {
         width: 80,
         height: 80,
         borderRadius: 8,
-        backgroundColor: colors.charcoal[100],
+        backgroundColor: COLORS.charcoal[100],
     },
     itemDetails: {
         flex: 1,
-        marginLeft: spacing.md,
+        marginLeft: SPACING.md,
         justifyContent: 'center',
     },
     itemName: {
-        fontSize: typography.fontSize.base,
-        fontWeight: '600',
-        color: colors.text.primary,
-        marginBottom: spacing.xs,
+        fontSize: TYPOGRAPHY.sizes.md,
+        fontWeight: TYPOGRAPHY.weights.semibold as any,
+        color: COLORS.text,
+        marginBottom: SPACING.xs,
     },
     itemSize: {
-        fontSize: typography.fontSize.sm,
-        color: colors.text.secondary,
+        fontSize: TYPOGRAPHY.sizes.sm,
+        color: COLORS.textSecondary,
     },
     itemFrame: {
-        fontSize: typography.fontSize.sm,
-        color: colors.text.secondary,
+        fontSize: TYPOGRAPHY.sizes.sm,
+        color: COLORS.textSecondary,
     },
     itemPrice: {
-        fontSize: typography.fontSize.lg,
-        fontWeight: '700',
-        color: colors.sage[400],
-        marginTop: spacing.xs,
+        fontSize: TYPOGRAPHY.sizes.lg,
+        fontWeight: TYPOGRAPHY.weights.bold as any,
+        color: COLORS.sage[400],
+        marginTop: SPACING.xs,
     },
     itemActions: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: spacing.sm,
+        paddingTop: SPACING.sm,
         borderTopWidth: 1,
-        borderTopColor: colors.border,
+        borderTopColor: COLORS.border,
     },
     quantityContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.cream[50],
+        backgroundColor: COLORS.cream[50],
         borderRadius: 8,
-        padding: spacing.xs,
+        padding: SPACING.xs,
     },
     quantityButton: {
         width: 32,
         height: 32,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.sage[400],
+        backgroundColor: COLORS.sage[400],
         borderRadius: 6,
     },
     quantityButtonText: {
-        fontSize: typography.fontSize.lg,
-        fontWeight: '700',
-        color: colors.surface,
+        fontSize: TYPOGRAPHY.sizes.lg,
+        fontWeight: TYPOGRAPHY.weights.bold as any,
+        color: COLORS.surface,
     },
     quantityText: {
-        fontSize: typography.fontSize.base,
-        fontWeight: '600',
-        color: colors.text.primary,
-        marginHorizontal: spacing.md,
+        fontSize: TYPOGRAPHY.sizes.md,
+        fontWeight: TYPOGRAPHY.weights.semibold as any,
+        color: COLORS.text,
+        marginHorizontal: SPACING.md,
         minWidth: 30,
         textAlign: 'center',
     },
     removeButton: {
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
+        paddingVertical: SPACING.sm,
+        paddingHorizontal: SPACING.md,
     },
     removeButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: '600',
-        color: colors.error,
+        fontSize: TYPOGRAPHY.sizes.sm,
+        fontWeight: TYPOGRAPHY.weights.semibold as any,
+        color: COLORS.error,
     },
     footer: {
-        marginTop: spacing.lg,
-        paddingTop: spacing.lg,
+        marginTop: SPACING.lg,
+        paddingTop: SPACING.lg,
         borderTopWidth: 2,
-        borderTopColor: colors.sage[400],
+        borderTopColor: COLORS.sage[400],
     },
     totalContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: spacing.md,
+        marginBottom: SPACING.md,
     },
     totalLabel: {
-        fontSize: typography.fontSize.lg,
-        fontWeight: '600',
-        color: colors.text.primary,
+        fontSize: TYPOGRAPHY.sizes.lg,
+        fontWeight: TYPOGRAPHY.weights.semibold as any,
+        color: COLORS.text,
     },
     totalAmount: {
-        fontSize: typography.fontSize['2xl'],
-        fontWeight: '700',
-        color: colors.sage[400],
+        fontSize: TYPOGRAPHY.sizes.xxl,
+        fontWeight: TYPOGRAPHY.weights.bold as any,
+        color: COLORS.sage[400],
     },
     checkoutButton: {
-        marginTop: spacing.sm,
+        marginTop: SPACING.sm,
     },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: spacing.xl,
+        padding: SPACING.xl,
     },
     emptyTitle: {
-        fontSize: typography.fontSize['2xl'],
-        fontWeight: '700',
-        color: colors.text.primary,
-        marginBottom: spacing.sm,
+        fontSize: TYPOGRAPHY.sizes.xxl,
+        fontWeight: TYPOGRAPHY.weights.bold as any,
+        color: COLORS.text,
+        marginBottom: SPACING.sm,
     },
     emptyText: {
-        fontSize: typography.fontSize.base,
-        color: colors.text.secondary,
-        marginBottom: spacing.xl,
+        fontSize: TYPOGRAPHY.sizes.md,
+        color: COLORS.textSecondary,
+        marginBottom: SPACING.xl,
     },
     emptyButton: {
         minWidth: 200,

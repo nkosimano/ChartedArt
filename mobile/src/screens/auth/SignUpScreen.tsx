@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../../components/common/Button';
@@ -27,6 +28,19 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (error) {
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [error, shakeAnim]);
 
   const getPasswordStrength = (pwd: string): { strength: string; color: string } => {
     if (pwd.length === 0) return { strength: '', color: COLORS.textSecondary };
@@ -174,9 +188,9 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
             </View>
 
             {error ? (
-              <View style={styles.errorContainer}>
+              <Animated.View style={[styles.errorContainer, { transform: [{ translateX: shakeAnim }] }]}>
                 <Text style={styles.errorText}>{error}</Text>
-              </View>
+              </Animated.View>
             ) : null}
 
             <Button

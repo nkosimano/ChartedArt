@@ -18,4 +18,22 @@ export const COLORS = {
 };
 
 // Keep old export for backward compatibility
-export const colors = COLORS;
+export const colors = {
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  text: {
+    primary: '#1A1A1A',
+    secondary: '#6B7280',
+  },
+  border: '#E5E7EB',
+  error: '#EF4444',
+  sage: {
+    400: '#8B9A8B',
+  },
+  charcoal: {
+    100: '#F3F4F6',
+  },
+  cream: {
+    50: '#FAFAF9',
+  },
+};

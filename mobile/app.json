@@ -1,41 +1,58 @@
 {
   "expo": {
     "name": "ChartedArt Mobile",
-    "slug": "chartedart-mobile",
+    "slug": "chartedart",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.chartedart.mobile"
+      "bundleIdentifier": "com.chartedart.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to capture photos for custom art prints.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images for custom art prints.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.chartedart.mobile"
+      "package": "com.chartedart.mobile",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "web": {},
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you select images for custom art prints.",
+          "cameraPermission": "The app accesses your camera to let you take photos for custom art prints."
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.chartedart.mobile",
+          "enableGooglePay": true
+        }
+      ]
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "e32d253a-2fb2-4330-a4a4-85a9cdf5e7e6"
       }
-    }
+    },
+    "analytics": false,
+    "owner": "rulerev"
   }
 }

@@ -1,18 +1,23 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
+node_modules/
 /node_modules
 /.pnp
 .pnp.js
 
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
 # Testing
 /coverage
 
-# Build output (Vite default)
+# Build output
 /dist
-
-# Build output (Create React App default - remove if not using CRA)
-# /build
+/build
 
 # TypeScript cache
 *.tsbuildinfo
@@ -39,7 +44,6 @@ yarn.lock
 pnpm-lock.yaml
 
 # Environment Variables
-# Ignore local environment variables and secrets
 .env*.local
 .env
 
@@ -55,15 +59,11 @@ pnpm-lock.yaml
 .DS_Store
 .AppleDouble
 .LSOverride
-
-# Thumbnails
 ._*
-
-# Files that might appear on external disk
 .Spotlight-V100
 .Trashes
 
-# Misc System Files
+# Windows specific files
 Thumbs.db
 ehthumbs.db
 
@@ -78,4 +78,4 @@ ehthumbs.db
 *.swp
 
 # Vercel deployment files
-.vercelCON
+.vercel

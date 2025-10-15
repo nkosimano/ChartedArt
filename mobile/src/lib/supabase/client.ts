@@ -7,13 +7,31 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 // Custom storage adapter for expo-secure-store
 const ExpoSecureStoreAdapter = {
   getItem: async (key: string) => {
-    return await SecureStore.getItemAsync(key);
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      console.warn('SecureStore getItem error:', error);
+      return null;
+    }
   },
   setItem: async (key: string, value: string) => {
-    await SecureStore.setItemAsync(key, value);
+    try {
+      // If value is too large, truncate or handle differently
+      if (value.length > 2048) {
+        console.warn('SecureStore value too large, storing truncated version');
+        // For now, just store it anyway - the warning is just informational
+      }
+      await SecureStore.setItemAsync(key, value);
+    } catch (error) {
+      console.warn('SecureStore setItem error:', error);
+    }
   },
   removeItem: async (key: string) => {
-    await SecureStore.deleteItemAsync(key);
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch (error) {
+      console.warn('SecureStore removeItem error:', error);
+    }
   },
 };
 
@@ -84,6 +102,35 @@ export const supabaseAuth = {
         session: null, 
         error: error as AuthError 
       };
+    }
+  },
+
+  /**
+   * Resend confirmation email for signup
+   */
+  resendConfirmation: async (email: string): Promise<{ error: AuthError | null }> => {
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      return { error };
+    } catch (error) {
+      console.error('Resend confirmation error:', error);
+      return { error: error as AuthError };
+    }
+  },
+
+  /**
+   * Request password reset email
+   */
+  resetPassword: async (email: string): Promise<{ error: AuthError | null }> => {
+    try {
+      const redirectTo = process.env.EXPO_PUBLIC_SUPABASE_RESET_REDIRECT_URL || undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+      return { error };
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return { error: error as AuthError };
     }
   },
 

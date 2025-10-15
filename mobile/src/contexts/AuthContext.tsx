@@ -8,6 +8,8 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  resendConfirmation: (email: string) => Promise<{ error: string | null }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -114,12 +116,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const resendConfirmation = async (email: string): Promise<{ error: string | null }> => {
+    try {
+      const { error } = await supabaseAuth.resendConfirmation(email);
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (error) {
+      console.error('Resend confirmation error:', error);
+      return { error: 'Failed to resend confirmation email.' };
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<{ error: string | null }> => {
+    try {
+      const { error } = await supabaseAuth.resetPassword(email);
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return { error: 'Failed to request password reset.' };
+    }
+  };
+
   const value: AuthContextType = {
     user,
     session,
     loading,
     signIn,
     signUp,
+    resendConfirmation,
+    resetPassword,
     signOut,
   };
 

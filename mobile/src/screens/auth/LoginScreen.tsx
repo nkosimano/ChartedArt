@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Animated,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../../components/common/Button';
@@ -22,11 +23,24 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, resendConfirmation } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (error) {
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [error, shakeAnim]);
 
   const handleLogin = async () => {
     // Clear previous errors
@@ -66,6 +80,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const navigateToSignUp = () => {
     navigation.navigate('SignUp');
+  };
+
+  const navigateToForgotPassword = () => {
+    navigation.navigate('ForgotPassword');
   };
 
   if (loading && !isSubmitting) {
@@ -121,9 +139,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             {error ? (
-              <View style={styles.errorContainer}>
+              <Animated.View style={[styles.errorContainer, { transform: [{ translateX: shakeAnim }] }]}>
                 <Text style={styles.errorText}>{error}</Text>
-              </View>
+              </Animated.View>
             ) : null}
 
             <Button
@@ -132,6 +150,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               disabled={isSubmitting}
               style={styles.loginButton}
             />
+
+            <TouchableOpacity onPress={navigateToForgotPassword} disabled={isSubmitting} style={styles.forgotPasswordContainer}>
+              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={async () => {
+                if (!email.trim()) {
+                  Alert.alert('Enter Email', 'Please enter your email above to resend the confirmation email.');
+                  return;
+                }
+                const { error } = await resendConfirmation(email.trim());
+                if (error) {
+                  Alert.alert('Resend Failed', error);
+                } else {
+                  Alert.alert('Email Sent', 'If an account exists for this email, a confirmation message has been sent.');
+                }
+              }} 
+              disabled={isSubmitting}
+              style={styles.resendContainer}
+            >
+              <Text style={styles.resendText}>Resend confirmation email</Text>
+            </TouchableOpacity>
 
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>Don't have an account? </Text>
@@ -226,6 +267,22 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.primary,
     fontWeight: TYPOGRAPHY.weights.semibold as any,
+  },
+  forgotPasswordContainer: {
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  forgotPasswordText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.primary,
+  },
+  resendContainer: {
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  resendText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.primary,
   },
 });
 
