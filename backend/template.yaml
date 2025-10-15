@@ -1,0 +1,396 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ChartedArt Backend Services
+  Serverless API with Lambda functions, API Gateway, and S3 storage
+
+# Global configuration for all Lambda functions
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 256
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        SUPABASE_URL: !Ref SupabaseUrl
+        SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+        STRIPE_SECRET_KEY: !Ref StripeSecretKey
+        S3_BUCKET_NAME: !Ref UploadsBucket
+        NODE_ENV: production
+    Architectures:
+      - x86_64
+
+# Parameters for sensitive configuration
+Parameters:
+  SupabaseUrl:
+    Type: String
+    Description: The URL for the Supabase project
+    Default: https://vtvngbvmizpomdflfrsu.supabase.co
+  
+  SupabaseServiceKey:
+    Type: String
+    Description: The service role key for Supabase (KEEP SECRET)
+    NoEcho: true
+  
+  StripeSecretKey:
+    Type: String
+    Description: The secret key for Stripe (KEEP SECRET)
+    NoEcho: true
+  
+  Environment:
+    Type: String
+    Description: Environment name (dev, staging, production)
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - production
+
+Resources:
+  # API Gateway with CORS and rate limiting
+  ChartedArtApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"  # TODO: In production, replace with actual domain
+        MaxAge: "'600'"
+      # Rate limiting and throttling
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 50
+      # JWT Authorizer for protected endpoints
+      Auth:
+        DefaultAuthorizer: SupabaseAuthorizer
+        Authorizers:
+          SupabaseAuthorizer:
+            Type: JWT
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              Audience:
+                - authenticated
+              Issuer: !Sub 'https://${SupabaseUrl}/auth/v1'
+      # Enable request validation
+      RequestValidatorId: !Ref RequestValidator
+      Models:
+        OrderRequest:
+          type: object
+          required:
+            - items
+            - shipping_address
+          properties:
+            items:
+              type: array
+            shipping_address:
+              type: object
+  
+  # Request validator for API Gateway
+  RequestValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      RestApiId: !Ref ChartedArtApi
+      ValidateRequestBody: true
+      ValidateRequestParameters: true
+
+  # CloudWatch Log Group for API Gateway
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${ChartedArtApi}'
+      RetentionInDays: 30
+
+  # S3 Bucket for file uploads with security and lifecycle policies
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'chartedart-uploads-${AWS::AccountId}-${Environment}'
+      # Block all public access
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      # CORS configuration for direct uploads from frontend
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - PUT
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - '*'  # TODO: In production, replace with actual domain
+            MaxAge: 3000
+      # Lifecycle rule to delete unscanned files after 1 day
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteUnscannedFiles
+            Status: Enabled
+            ExpirationInDays: 1
+            TagFilters:
+              - Key: scanned
+                Value: 'false'
+          - Id: DeleteOldFiles
+            Status: Enabled
+            ExpirationInDays: 365
+            Prefix: 'uploads/'
+      # Enable versioning for data protection
+      VersioningConfiguration:
+        Status: Enabled
+      # Server-side encryption
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      # Tags for organization
+      Tags:
+        - Key: Application
+          Value: ChartedArt
+        - Key: Environment
+          Value: !Ref Environment
+
+  # S3 Bucket Policy
+  UploadsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref UploadsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: DenyInsecureConnections
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt UploadsBucket.Arn
+              - !Sub '${UploadsBucket.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+
+  # Lambda Function: Generate Upload URL
+  GenerateUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: generate-upload-url.handler
+      Description: Generate presigned S3 URLs for file uploads
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /generate-upload-url
+            Method: POST
+            Auth:
+              Authorizer: SupabaseAuthorizer
+
+  # CloudWatch Log Group for GenerateUploadUrlFunction
+  GenerateUploadUrlFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${GenerateUploadUrlFunction}'
+      RetentionInDays: 30
+
+  # Lambda Function: Antivirus Scan
+  AntivirusScanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: antivirus-scan.handler
+      Description: Scan uploaded files for viruses
+      Timeout: 30
+      MemorySize: 512
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref UploadsBucket
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:DeleteObject
+                - s3:PutObjectTagging
+              Resource: !Sub '${UploadsBucket.Arn}/*'
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref UploadsBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
+
+  # CloudWatch Log Group for AntivirusScanFunction
+  AntivirusScanFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AntivirusScanFunction}'
+      RetentionInDays: 30
+
+  # Permission for S3 to invoke AntivirusScanFunction
+  AntivirusScanFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AntivirusScanFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt UploadsBucket.Arn
+
+  # Lambda Function: Get Orders (Admin)
+  GetOrdersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: get-orders.handler
+      Description: Get all orders (admin only)
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/orders
+            Method: GET
+            Auth:
+              Authorizer: SupabaseAuthorizer
+
+  # CloudWatch Log Group for GetOrdersFunction
+  GetOrdersFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${GetOrdersFunction}'
+      RetentionInDays: 30
+
+  # Lambda Function: Update Order Status (Admin)
+  UpdateOrderStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: update-order-status.handler
+      Description: Update order status (admin only)
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/orders/{id}
+            Method: PUT
+            Auth:
+              Authorizer: SupabaseAuthorizer
+
+  # CloudWatch Log Group for UpdateOrderStatusFunction
+  UpdateOrderStatusFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${UpdateOrderStatusFunction}'
+      RetentionInDays: 30
+
+  # Lambda Function: Create Order
+  CreateOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: create-order.handler
+      Description: Create a new order
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /orders
+            Method: POST
+            Auth:
+              Authorizer: SupabaseAuthorizer
+
+  # CloudWatch Log Group for CreateOrderFunction
+  CreateOrderFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${CreateOrderFunction}'
+      RetentionInDays: 30
+
+  # Lambda Function: Create Payment Intent
+  CreatePaymentIntentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: create-payment-intent.handler
+      Description: Create Stripe payment intent
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /create-payment-intent
+            Method: POST
+            Auth:
+              Authorizer: SupabaseAuthorizer
+
+  # CloudWatch Log Group for CreatePaymentIntentFunction
+  CreatePaymentIntentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${CreatePaymentIntentFunction}'
+      RetentionInDays: 30
+
+  # Lambda Function: Register Push Token
+  RegisterPushTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: register-push-token.handler
+      Description: Register push notification token for user
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /push-token
+            Method: POST
+            Auth:
+              Authorizer: SupabaseAuthorizer
+
+  # CloudWatch Log Group for RegisterPushTokenFunction
+  RegisterPushTokenFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${RegisterPushTokenFunction}'
+      RetentionInDays: 30
+
+# Outputs for easy reference
+Outputs:
+  ApiGatewayUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ChartedArtApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+  
+  ApiGatewayId:
+    Description: "API Gateway ID"
+    Value: !Ref ChartedArtApi
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiId"
+  
+  Region:
+    Description: "AWS Region"
+    Value: !Ref AWS::Region
+  
+  UploadsBucketName:
+    Description: "S3 bucket name for file uploads"
+    Value: !Ref UploadsBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-UploadsBucket"
+  
+  UploadsBucketArn:
+    Description: "S3 bucket ARN"
+    Value: !GetAtt UploadsBucket.Arn
