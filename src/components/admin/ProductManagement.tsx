@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import {
   Package,
@@ -26,8 +26,10 @@ import {
   ExternalLink,
   Users,
   DollarSign,
-  ShoppingCart
+  ShoppingCart,
+  Image as ImageIcon
 } from 'lucide-react';
+import { uploadImage, validateImage } from '../../utils/imageUpload';
 
 interface Product {
   id: string;
@@ -953,6 +955,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     image_url: '',
     status: 'draft' as 'active' | 'inactive' | 'draft'
   });
+  
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -969,6 +976,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         throw new Error('User not authenticated');
       }
 
+      let imageUrl = formData.image_url;
+
+      // Upload image if file is selected
+      if (selectedFile) {
+        setIsUploading(true);
+        try {
+          const uploadResult = await uploadImage(selectedFile, session.user.id, {
+            bucket: 'product-images',
+            folder: 'products'
+          });
+          imageUrl = uploadResult.url;
+        } catch (uploadError) {
+          throw new Error(`Image upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
       const { error: insertError } = await supabase
         .from('products')
         .insert({
@@ -977,12 +1002,17 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           price: parseFloat(formData.price),
           stock_quantity: parseInt(formData.stock_quantity),
           category: formData.category,
-          image_url: formData.image_url || null,
+          image_url: imageUrl || null,
           status: formData.status,
           artist_id: session.user.id
         });
 
       if (insertError) throw insertError;
+
+      // Cleanup preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
 
       onProductAdded();
       onClose();
@@ -996,6 +1026,30 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateImage(file);
+    if (validationError) {
+      setError(validationError.message);
+      return;
+    }
+
+    setSelectedFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setPreviewUrl(previewUrl);
+    setError(null);
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -1104,18 +1158,74 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               </select>
             </div>
 
-            {/* Image URL */}
+            {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image URL
+                Product Image
               </label>
-              <input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => handleInputChange('image_url', e.target.value)}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-sage-500 focus:border-sage-500"
-                placeholder="https://example.com/image.jpg"
-              />
+              <div className="mt-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                
+                {!selectedFile && !formData.image_url ? (
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-sage-400 cursor-pointer transition-colors"
+                  >
+                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">
+                      <span className="font-medium text-sage-600">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, WebP up to 10MB</p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <img
+                      src={previewUrl || formData.image_url}
+                      alt="Product preview"
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
+                    <button
+                      type="button"
+                      onClick={clearSelectedFile}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-2 left-2 bg-white bg-opacity-90 text-gray-700 px-2 py-1 rounded text-sm hover:bg-opacity-100"
+                    >
+                      Change Image
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Optional: URL input as fallback */}
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Or enter image URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => {
+                    handleInputChange('image_url', e.target.value);
+                    if (e.target.value) {
+                      clearSelectedFile();
+                    }
+                  }}
+                  className="w-full border-gray-300 rounded-md shadow-sm focus:ring-sage-500 focus:border-sage-500 text-sm"
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
             </div>
           </div>
 
@@ -1144,10 +1254,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isUploading}
               className="px-4 py-2 text-sm font-medium text-white bg-sage-600 border border-transparent rounded-md hover:bg-sage-700 disabled:opacity-50"
             >
-              {loading ? 'Adding Product...' : 'Add Product'}
+              {isUploading ? 'Uploading Image...' : loading ? 'Adding Product...' : 'Add Product'}
             </button>
           </div>
         </form>

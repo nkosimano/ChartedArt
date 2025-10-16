@@ -5,11 +5,15 @@ import HomeScreen from '../screens/home/HomeScreen';
 import CreateScreen from '../screens/create/CreateScreen';
 import CartScreen from '../screens/cart/CartScreen';
 import AccountScreen from '../screens/account/AccountScreen';
+import EventListScreen from '../screens/events/EventListScreen';
+import MovementListScreen from '../screens/movements/MovementListScreen';
 import { COLORS } from '../constants/colors';
 
 export type MainTabsParamList = {
   Home: undefined;
   Create: undefined;
+  Movements: undefined;
+  Events: undefined;
   Cart: undefined;
   Account: undefined;
 };
@@ -27,6 +31,10 @@ const MainTabs: React.FC = () => {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Create') {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
+          } else if (route.name === 'Movements') {
+            iconName = focused ? 'trending-up' : 'trending-up-outline';
+          } else if (route.name === 'Events') {
+            iconName = focused ? 'trophy' : 'trophy-outline';
           } else if (route.name === 'Cart') {
             iconName = focused ? 'cart' : 'cart-outline';
           } else if (route.name === 'Account') {
@@ -49,23 +57,33 @@ const MainTabs: React.FC = () => {
         headerTintColor: COLORS.text,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{ title: 'Home' }}
       />
-      <Tab.Screen 
-        name="Create" 
+      <Tab.Screen
+        name="Create"
         component={CreateScreen}
         options={{ title: 'Create' }}
       />
-      <Tab.Screen 
-        name="Cart" 
+      <Tab.Screen
+        name="Movements"
+        component={MovementListScreen}
+        options={{ title: 'Movements' }}
+      />
+      <Tab.Screen
+        name="Events"
+        component={EventListScreen}
+        options={{ title: 'Events' }}
+      />
+      <Tab.Screen
+        name="Cart"
         component={CartScreen}
         options={{ title: 'Cart' }}
       />
-      <Tab.Screen 
-        name="Account" 
+      <Tab.Screen
+        name="Account"
         component={AccountScreen}
         options={{ title: 'Account' }}
       />

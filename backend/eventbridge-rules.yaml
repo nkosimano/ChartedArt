@@ -1,0 +1,45 @@
+# AWS EventBridge Rules Configuration for ChartedArt Background Jobs
+# Deploy these rules after deploying the SAM template
+
+# Rule 1: Calculate Movement Engagement Scores
+# Runs every 10 minutes to update Tier 2 metrics
+CalculateEngagementRule:
+  Type: AWS::Events::Rule
+  Properties:
+    Name: chartedart-calculate-engagement
+    Description: Calculate movement engagement scores every 10 minutes
+    ScheduleExpression: rate(10 minutes)
+    State: ENABLED
+    Targets:
+      - Arn: !GetAtt CronCalculateEngagementFunction.Arn
+        Id: CalculateEngagementTarget
+
+# Rule 2: Cleanup Expired Puzzle Piece Reservations
+# Runs every 5 minutes to release expired reservations
+CleanupReservationsRule:
+  Type: AWS::Events::Rule
+  Properties:
+    Name: chartedart-cleanup-reservations
+    Description: Cleanup expired puzzle piece reservations every 5 minutes
+    ScheduleExpression: rate(5 minutes)
+    State: ENABLED
+    Targets:
+      - Arn: !GetAtt CronCleanupPuzzleReservationsFunction.Arn
+        Id: CleanupReservationsTarget
+
+# Lambda Permissions for EventBridge
+CalculateEngagementPermission:
+  Type: AWS::Lambda::Permission
+  Properties:
+    FunctionName: !Ref CronCalculateEngagementFunction
+    Action: lambda:InvokeFunction
+    Principal: events.amazonaws.com
+    SourceArn: !GetAtt CalculateEngagementRule.Arn
+
+CleanupReservationsPermission:
+  Type: AWS::Lambda::Permission
+  Properties:
+    FunctionName: !Ref CronCleanupPuzzleReservationsFunction
+    Action: lambda:InvokeFunction
+    Principal: events.amazonaws.com
+    SourceArn: !GetAtt CleanupReservationsRule.Arn

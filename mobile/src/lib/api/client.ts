@@ -141,7 +141,7 @@ class APIClient {
     switch (endpoint) {
       case '/profile':
         return mockUser as T;
-      
+
       case '/cart':
         if (method === 'GET') {
           return { items: mockCartItems } as T;
@@ -150,7 +150,7 @@ class APIClient {
           return { success: true, message: 'Item added to cart' } as T;
         }
         break;
-      
+
       case '/orders':
         if (method === 'GET') {
           return { orders: mockOrders } as T;
@@ -159,30 +159,95 @@ class APIClient {
           return { id: 'new-order-123', success: true } as T;
         }
         break;
-      
+
       case '/gallery':
         return { items: mockGalleryItems } as T;
-      
+
+      case '/events':
+        if (method === 'GET') {
+          return {
+            events: [
+              {
+                id: '1',
+                title: 'Summer Art Competition 2025',
+                description: 'Show off your best summer-themed artwork!',
+                event_type: 'competition',
+                event_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                registration_deadline: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+                entry_fee: 25.00,
+                prize_pool: 5000.00,
+                status: 'published',
+                cover_image: 'https://picsum.photos/800/400?random=1',
+              },
+              {
+                id: '2',
+                title: 'Watercolor Workshop',
+                description: 'Learn advanced watercolor techniques',
+                event_type: 'workshop',
+                event_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+                registration_deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+                entry_fee: 50.00,
+                status: 'published',
+                cover_image: 'https://picsum.photos/800/400?random=2',
+              }
+            ],
+            count: 2
+          } as T;
+        }
+        break;
+
       case '/generate-upload-url':
         return {
           uploadUrl: 'https://mock-s3-url.com/upload',
           imageKey: 'mock-image-key',
           imageUrl: `https://picsum.photos/400/300?random=${Date.now()}`
         } as T;
-      
+
       case '/create-payment-intent':
         return {
           clientSecret: 'pi_mock_client_secret',
           ephemeralKey: 'ek_mock_ephemeral_key',
           customer: 'cus_mock_customer'
         } as T;
-      
+
       default:
         if (endpoint.startsWith('/orders/')) {
           return mockOrderDetail as T;
         }
         if (endpoint.startsWith('/cart/')) {
           return { success: true } as T;
+        }
+        if (endpoint.startsWith('/events/')) {
+          if (endpoint.includes('/register')) {
+            return { registration: { id: 'reg-123', status: 'confirmed' }, message: 'Registration successful' } as T;
+          }
+          if (endpoint.includes('/submissions')) {
+            if (endpoint.includes('/upload-request')) {
+              return {
+                uploadUrl: 'https://mock-s3-url.com/upload',
+                submissionId: 'sub-123',
+                expiresIn: 3600
+              } as T;
+            }
+            if (endpoint.includes('/confirm')) {
+              return { submission: { id: 'sub-123', status: 'pending' }, message: 'Submission confirmed' } as T;
+            }
+            return { submissions: [], count: 0 } as T;
+          }
+          return {
+            event: {
+              id: '1',
+              title: 'Summer Art Competition 2025',
+              description: 'Show off your best summer-themed artwork!',
+              event_type: 'competition',
+              event_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              registration_deadline: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+              entry_fee: 25.00,
+              prize_pool: 5000.00,
+              status: 'published',
+              cover_image: 'https://picsum.photos/800/400?random=1',
+            }
+          } as T;
         }
         return { success: true, message: 'Mock response' } as T;
     }

@@ -12,6 +12,11 @@ import OrderHistoryScreen from './src/screens/orders/OrderHistoryScreen';
 import OrderDetailScreen from './src/screens/orders/OrderDetailScreenSimple';
 import EditProfileScreen from './src/screens/account/EditProfileScreen';
 import SupportScreen from './src/screens/support/SupportScreen';
+import EventListScreen from './src/screens/events/EventListScreen';
+import EventDetailScreen from './src/screens/events/EventDetailScreen';
+import SubmissionScreen from './src/screens/events/SubmissionScreen';
+import MovementDetailScreen from './src/screens/movements/MovementDetailScreen';
+import PuzzlePieceGalleryScreen from './src/screens/puzzle/PuzzlePieceGalleryScreen';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { COLORS } from './src/constants/colors';
 
@@ -69,10 +74,35 @@ function RootNavigator() {
             component={EditProfileScreen}
             options={{ headerShown: true, title: 'Edit Profile' }}
           />
-          <Stack.Screen 
-            name="Support" 
+          <Stack.Screen
+            name="Support"
             component={SupportScreen}
             options={{ headerShown: true, title: 'Support' }}
+          />
+          <Stack.Screen
+            name="EventList"
+            component={EventListScreen}
+            options={{ headerShown: true, title: 'Events' }}
+          />
+          <Stack.Screen
+            name="EventDetail"
+            component={EventDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="EventSubmission"
+            component={SubmissionScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MovementDetail"
+            component={MovementDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PuzzlePieceGallery"
+            component={PuzzlePieceGalleryScreen}
+            options={{ headerShown: true, title: 'Puzzle Pieces' }}
           />
         </>
       ) : (

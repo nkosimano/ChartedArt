@@ -225,6 +225,153 @@ export const api = {
       return { success: true };
     },
   },
+
+  /**
+   * Events endpoints
+   */
+  events: {
+    /**
+     * Get all published events
+     */
+    list: async (params?: {
+      event_type?: string;
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.event_type) queryParams.append('event_type', params.event_type);
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+      const query = queryParams.toString();
+      return fetchAPI<{ events: any[]; count: number }>(`/events${query ? `?${query}` : ''}`);
+    },
+
+    /**
+     * Get a single event by ID
+     */
+    get: async (eventId: string) => {
+      return fetchAPI<{ event: any }>(`/events/${eventId}`);
+    },
+
+    /**
+     * Register for an event
+     */
+    register: async (eventId: string, registrationData: {
+      registration_type?: string;
+      team_name?: string;
+      team_members?: any[];
+      custom_fields?: any;
+    }) => {
+      return fetchAPI<{ registration: any; message: string }>(`/events/${eventId}/register`, {
+        method: 'POST',
+        body: JSON.stringify(registrationData),
+      });
+    },
+
+    /**
+     * Get user's registrations
+     */
+    getMyRegistrations: async () => {
+      return fetchAPI<{ registrations: any[] }>('/events/registrations/me');
+    },
+  },
+
+  /**
+   * Competition submissions endpoints
+   */
+  submissions: {
+    /**
+     * Create a submission upload request
+     */
+    createUploadRequest: async (eventId: string, submissionData: {
+      title: string;
+      description?: string;
+      filename: string;
+      contentType: string;
+      fileSize: number;
+    }) => {
+      return fetchAPI<{
+        uploadUrl: string;
+        submissionId: string;
+        expiresIn: number;
+      }>(`/events/${eventId}/submissions/upload-request`, {
+        method: 'POST',
+        body: JSON.stringify(submissionData),
+      });
+    },
+
+    /**
+     * Confirm submission after upload
+     */
+    confirmSubmission: async (eventId: string, submissionId: string) => {
+      return fetchAPI<{ submission: any; message: string }>(
+        `/events/${eventId}/submissions/${submissionId}/confirm`,
+        {
+          method: 'POST',
+        }
+      );
+    },
+
+    /**
+     * Get submissions for an event
+     */
+    list: async (eventId: string, params?: {
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+      const query = queryParams.toString();
+      return fetchAPI<{ submissions: any[]; count: number }>(
+        `/events/${eventId}/submissions${query ? `?${query}` : ''}`
+      );
+    },
+
+    /**
+     * Get user's submissions
+     */
+    getMySubmissions: async (eventId?: string) => {
+      const endpoint = eventId
+        ? `/events/${eventId}/submissions/me`
+        : '/submissions/me';
+      return fetchAPI<{ submissions: any[] }>(endpoint);
+    },
+
+    /**
+     * Update submission
+     */
+    update: async (eventId: string, submissionId: string, data: {
+      title?: string;
+      description?: string;
+    }) => {
+      return fetchAPI<{ submission: any; message: string }>(
+        `/events/${eventId}/submissions/${submissionId}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        }
+      );
+    },
+
+    /**
+     * Delete submission
+     */
+    delete: async (eventId: string, submissionId: string) => {
+      return fetchAPI<{ message: string }>(
+        `/events/${eventId}/submissions/${submissionId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+    },
+  },
 };
 
 export default api;

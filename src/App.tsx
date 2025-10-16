@@ -10,7 +10,11 @@ import LoginPage from './pages/auth/LoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import GalleryPage from './pages/GalleryPage';
 import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
+import EventSubmissionPage from './pages/EventSubmissionPage';
 import BlogPage from './pages/BlogPage';
+import MovementsPage from './pages/MovementsPage';
+import MovementDetailPage from './pages/MovementDetailPage';
 import FAQPage from './pages/FAQPage';
 import ShippingPage from './pages/ShippingPage';
 import OrdersPage from './pages/OrdersPage';
@@ -86,9 +90,29 @@ function App() {
             <EventsPage />
           </ProtectedRoute>
         } />
+        <Route path="/events/:id" element={
+          <ProtectedRoute>
+            <EventDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/events/:id/submit" element={
+          <ProtectedRoute>
+            <EventSubmissionPage />
+          </ProtectedRoute>
+        } />
         <Route path="/blog" element={
           <ProtectedRoute>
             <BlogPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/movements" element={
+          <ProtectedRoute>
+            <MovementsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/movements/:slug" element={
+          <ProtectedRoute>
+            <MovementDetailPage />
           </ProtectedRoute>
         } />
         <Route path="/create" element={

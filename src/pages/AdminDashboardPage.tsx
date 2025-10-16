@@ -8,16 +8,18 @@ import {
   Package, 
   Users,
   Settings,
-  Bell
+  Bell,
+  TrendingUp
 } from 'lucide-react';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import ProductManagement from '@/components/admin/ProductManagement';
 import CustomerManagement from '@/components/admin/CustomerManagement';
 import SystemSettings from '@/components/admin/SystemSettings';
+import MovementManagement from '@/components/admin/MovementManagement';
 import AdminOrdersPage from './AdminOrdersPage';
 import AdminMessagesPage from './AdminMessagesPage';
 
-type TabType = 'dashboard' | 'orders' | 'messages' | 'products' | 'customers' | 'settings';
+type TabType = 'dashboard' | 'orders' | 'messages' | 'products' | 'customers' | 'movements' | 'settings';
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -123,6 +125,7 @@ export default function AdminDashboardPage() {
     { id: 'messages' as TabType, name: 'Messages', icon: MessageSquare, description: 'Customer Support' },
     { id: 'products' as TabType, name: 'Products', icon: Package, description: 'Inventory Management' },
     { id: 'customers' as TabType, name: 'Customers', icon: Users, description: 'Customer Insights' },
+    { id: 'movements' as TabType, name: 'Movements', icon: TrendingUp, description: 'Social Impact Campaigns' },
     { id: 'settings' as TabType, name: 'Settings', icon: Settings, description: 'System Configuration' },
   ];
 
@@ -138,6 +141,8 @@ export default function AdminDashboardPage() {
         return <ProductManagement />;
       case 'customers':
         return <CustomerManagement />;
+      case 'movements':
+        return <MovementManagement />;
       case 'settings':
         return <SystemSettings />;
       default:

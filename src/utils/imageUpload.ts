@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase/client';
 
 // Configuration constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB

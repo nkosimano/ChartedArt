@@ -1,0 +1,163 @@
+{
+  "dashboardName": "ChartedArt-Production-Monitoring",
+  "dashboardBody": {
+    "widgets": [
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["AWS/Lambda", "Invocations", { "stat": "Sum", "label": "Total Invocations" }],
+            [".", "Errors", { "stat": "Sum", "label": "Errors", "color": "#d62728" }],
+            [".", "Throttles", { "stat": "Sum", "label": "Throttles", "color": "#ff7f0e" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "Lambda Function Health",
+          "period": 300,
+          "yAxis": {
+            "left": {
+              "min": 0
+            }
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["AWS/Lambda", "Duration", { "stat": "Average", "label": "Avg Duration" }],
+            ["...", { "stat": "p95", "label": "P95 Duration", "color": "#ff7f0e" }],
+            ["...", { "stat": "p99", "label": "P99 Duration", "color": "#d62728" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "Lambda Response Times (ms)",
+          "period": 300,
+          "yAxis": {
+            "left": {
+              "min": 0,
+              "max": 3000
+            }
+          },
+          "annotations": {
+            "horizontal": [
+              {
+                "label": "P95 Target (500ms)",
+                "value": 500,
+                "fill": "above",
+                "color": "#d62728"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["AWS/ApiGateway", "Count", { "stat": "Sum", "label": "Total Requests" }],
+            [".", "4XXError", { "stat": "Sum", "label": "4XX Errors", "color": "#ff7f0e" }],
+            [".", "5XXError", { "stat": "Sum", "label": "5XX Errors", "color": "#d62728" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "API Gateway Requests",
+          "period": 300
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["AWS/ApiGateway", "Latency", { "stat": "Average", "label": "Avg Latency" }],
+            ["...", { "stat": "p95", "label": "P95 Latency", "color": "#ff7f0e" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "API Gateway Latency (ms)",
+          "period": 300,
+          "annotations": {
+            "horizontal": [
+              {
+                "label": "P95 Target (800ms)",
+                "value": 800,
+                "fill": "above",
+                "color": "#d62728"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "log",
+        "properties": {
+          "query": "SOURCE '/aws/lambda/chartedart-movements-list'\n| SOURCE '/aws/lambda/chartedart-movements-get'\n| SOURCE '/aws/lambda/chartedart-movements-donate'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 20",
+          "region": "us-east-1",
+          "stacked": false,
+          "title": "Recent Errors (Movements)",
+          "view": "table"
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["ChartedArt", "StripeWebhookSuccess", { "stat": "Sum", "label": "Successful Webhooks" }],
+            [".", "StripeWebhookError", { "stat": "Sum", "label": "Failed Webhooks", "color": "#d62728" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "Stripe Webhook Health",
+          "period": 300
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["ChartedArt", "PuzzlePieceReservationSuccess", { "stat": "Sum", "label": "Successful Reservations" }],
+            [".", "PuzzlePieceReservationConflict", { "stat": "Sum", "label": "Race Conditions", "color": "#d62728" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "Puzzle Piece Reservations",
+          "period": 300
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["ChartedArt", "CronEngagementCalculationDuration", { "stat": "Average", "label": "Avg Duration (ms)" }],
+            [".", "CronEngagementCalculationErrors", { "stat": "Sum", "label": "Errors", "color": "#d62728" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "Background Job: Engagement Calculation",
+          "period": 600
+        }
+      },
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            ["ChartedArt", "CronCleanupReservationsDuration", { "stat": "Average", "label": "Avg Duration (ms)" }],
+            [".", "CronCleanupReservationsCount", { "stat": "Sum", "label": "Reservations Cleaned" }]
+          ],
+          "view": "timeSeries",
+          "stacked": false,
+          "region": "us-east-1",
+          "title": "Background Job: Cleanup Reservations",
+          "period": 300
+        }
+      }
+    ]
+  }
+}

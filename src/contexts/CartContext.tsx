@@ -20,7 +20,6 @@ export const useCart = () => useContext(CartContext);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [itemCount, setItemCount] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const [cartId, setCartId] = useState<string | null>(null);
 
   const updateItemCount = async () => {
     try {
@@ -30,49 +29,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const { data: cart, error: cartError } = await supabase
-        .from('carts')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
+      // Query cart_items directly - no parent carts table
+      const { data: items, error: itemsError } = await supabase
+        .from('cart_items')
+        .select('*')
+        .eq('user_id', session.user.id);
 
-      // If table doesn't exist (404), just set count to 0 and return
-      if (cartError && cartError.code === 'PGRST116') {
+      // If cart_items table doesn't exist, just set count to 0
+      if (itemsError && itemsError.code === 'PGRST116') {
         setItemCount(0);
-        setCartId(null);
         return;
       }
 
-      if (cartError) throw cartError;
+      if (itemsError) throw itemsError;
 
-      if (cart) {
-        const { data: items, error: itemsError } = await supabase
-          .from('cart_items')
-          .select('*')
-          .eq('cart_id', cart.id);
-
-        // If cart_items table doesn't exist, just set count to 0
-        if (itemsError && itemsError.code === 'PGRST116') {
-          setItemCount(0);
-          setCartId(cart.id);
-          return;
-        }
-
-        if (itemsError) throw itemsError;
-
-        const count = items?.length || 0;
-
-        setItemCount(count);
-        setCartId(cart.id);
-      } else {
-        setItemCount(0);
-        setCartId(null);
-      }
+      const count = items?.length || 0;
+      setItemCount(count);
     } catch (error) {
       // Silently handle database errors for missing tables
       console.log('Cart functionality not available:', error);
       setItemCount(0);
-      setCartId(null);
     }
   };
 
@@ -114,12 +90,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           {
             event: '*',
             schema: 'public',
-            table: 'cart_items'
+            table: 'cart_items',
+            filter: `user_id=eq.${userId}`
           },
           (payload) => {
-            if (payload.eventType === 'INSERT' && cartId) {
+            if (payload.eventType === 'INSERT') {
               setItemCount(prev => prev + 1);
-            } else if (payload.eventType === 'DELETE' && cartId) {
+            } else if (payload.eventType === 'DELETE') {
               setItemCount(prev => Math.max(0, prev - 1));
             } else {
               // For other changes, refresh the count
@@ -137,7 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cartChannel.unsubscribe();
       }
     };
-  }, [userId, cartId]);
+  }, [userId]);
 
   return (
     <CartContext.Provider value={{ itemCount, updateItemCount }}>

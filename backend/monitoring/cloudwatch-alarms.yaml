@@ -1,0 +1,188 @@
+# CloudWatch Alarms for ChartedArt
+# Deploy with: aws cloudformation deploy --template-file cloudwatch-alarms.yaml --stack-name chartedart-alarms
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudWatch Alarms for ChartedArt Production Monitoring'
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Email address for alarm notifications
+    Default: alerts@chartedart.com
+
+Resources:
+  # SNS Topic for Alerts
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: chartedart-production-alerts
+      Subscription:
+        - Endpoint: !Ref AlertEmail
+          Protocol: email
+
+  # CRITICAL: P95 Latency > 800ms
+  HighLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ChartedArt-High-P95-Latency
+      AlarmDescription: 'CRITICAL: P95 API latency exceeds 800ms'
+      MetricName: Latency
+      Namespace: AWS/ApiGateway
+      Statistic: p95
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 800
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+      TreatMissingData: notBreaching
+
+  # CRITICAL: Stripe Webhook Error Rate > 2%
+  StripeWebhookErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ChartedArt-Stripe-Webhook-Errors
+      AlarmDescription: 'CRITICAL: Stripe webhook error rate exceeds 2%'
+      Metrics:
+        - Id: error_rate
+          Expression: '(errors / total) * 100'
+          Label: 'Error Rate %'
+        - Id: errors
+          MetricStat:
+            Metric:
+              Namespace: ChartedArt
+              MetricName: StripeWebhookError
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: total
+          MetricStat:
+            Metric:
+              Namespace: ChartedArt
+              MetricName: StripeWebhookTotal
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+      EvaluationPeriods: 1
+      Threshold: 2
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+      TreatMissingData: notBreaching
+
+  # CRITICAL: Puzzle Piece Race Conditions > 0
+  PuzzlePieceRaceConditionAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ChartedArt-Puzzle-Race-Conditions
+      AlarmDescription: 'CRITICAL: Puzzle piece reservation race conditions detected'
+      MetricName: PuzzlePieceReservationConflict
+      Namespace: ChartedArt
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+      TreatMissingData: notBreaching
+
+  # WARNING: Background Job Failure Rate > 5%
+  BackgroundJobFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ChartedArt-Background-Job-Failures
+      AlarmDescription: 'WARNING: Background job failure rate exceeds 5%'
+      Metrics:
+        - Id: failure_rate
+          Expression: '(failures / invocations) * 100'
+          Label: 'Failure Rate %'
+        - Id: failures
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: chartedart-cron-calculate-engagement
+            Period: 600
+            Stat: Sum
+          ReturnData: false
+        - Id: invocations
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: chartedart-cron-calculate-engagement
+            Period: 600
+            Stat: Sum
+          ReturnData: false
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+      TreatMissingData: notBreaching
+
+  # WARNING: Lambda Error Rate > 1%
+  LambdaErrorRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ChartedArt-Lambda-Error-Rate
+      AlarmDescription: 'WARNING: Lambda error rate exceeds 1%'
+      Metrics:
+        - Id: error_rate
+          Expression: '(errors / invocations) * 100'
+          Label: 'Error Rate %'
+        - Id: errors
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: invocations
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+      TreatMissingData: notBreaching
+
+  # INFO: High API Traffic
+  HighTrafficAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ChartedArt-High-Traffic
+      AlarmDescription: 'INFO: API traffic is unusually high'
+      MetricName: Count
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10000
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+      TreatMissingData: notBreaching
+
+Outputs:
+  AlertTopicArn:
+    Description: ARN of the SNS topic for alerts
+    Value: !Ref AlertTopic
+    Export:
+      Name: ChartedArt-AlertTopic
+
+  DashboardURL:
+    Description: URL to CloudWatch Dashboard
+    Value: !Sub 'https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=ChartedArt-Production-Monitoring'

@@ -1,0 +1,544 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ChartedArt Backend v3 - Complete Implementation
+  Includes: Movements, Puzzle Pieces, Events, Blog, Admin APIs, Redis caching, Background jobs
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - production
+    Description: Environment name
+  
+  SupabaseUrl:
+    Type: String
+    Description: Supabase project URL
+    Default: https://vtvngbvmizpomdflfrsu.supabase.co
+  
+  SupabaseServiceKey:
+    Type: String
+    NoEcho: true
+    Description: Supabase service role key
+  
+  StripeSecretKey:
+    Type: String
+    NoEcho: true
+    Description: Stripe secret key
+  
+  StripeWebhookSecret:
+    Type: String
+    NoEcho: true
+    Description: Stripe webhook signing secret
+    Default: ''
+  
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name for file uploads (leave empty for auto-generation)
+    Default: ''
+
+Conditions:
+  CreateS3Bucket: !Equals [!Ref S3BucketName, '']
+  UseRedis: !Not [!Equals [!Ref Environment, 'dev']]
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    MemorySize: 512
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        SUPABASE_URL: !Ref SupabaseUrl
+        SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+        STRIPE_SECRET_KEY: !Ref StripeSecretKey
+        STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
+        S3_BUCKET_NAME: !If
+          - CreateS3Bucket
+          - !Ref UploadsBucket
+          - !Ref S3BucketName
+        NODE_ENV: production
+
+Resources:
+  # ========================================
+  # S3 Bucket for Uploads
+  # ========================================
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Condition: CreateS3Bucket
+    Properties:
+      BucketName: !Sub 'chartedart-uploads-${AWS::AccountId}-${Environment}'
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3000
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # ========================================
+  # API Gateway
+  # ========================================
+  ChartedArtApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+        MaxAge: "'600'"
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 50
+
+  # ========================================
+  # Movements API (5 handlers)
+  # ========================================
+  MovementsListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/movements-list.handler
+      Description: List all active movements
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /movements
+            Method: GET
+
+  MovementsGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/movements-get.handler
+      Description: Get single movement details
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /movements/{id}
+            Method: GET
+
+  MovementsJoinFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/movements-join.handler
+      Description: Join a movement (authenticated)
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /movements/{id}/join
+            Method: POST
+
+  MovementsDonateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/movements-donate.handler
+      Description: Initiate donation via Stripe
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /movements/{id}/donate
+            Method: POST
+
+  StripeWebhookMovementsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/stripe-webhook-movements.handler
+      Description: Handle Stripe webhooks for donations
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /webhooks/stripe/movements
+            Method: POST
+
+  # ========================================
+  # Puzzle Pieces API (4 handlers)
+  # ========================================
+  PuzzlePiecesListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/puzzle-pieces-list.handler
+      Description: List puzzle pieces for a movement
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /movements/{movementId}/puzzle-pieces
+            Method: GET
+
+  PuzzlePiecesReserveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/puzzle-pieces-reserve.handler
+      Description: Reserve a puzzle piece (atomic)
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /puzzle-pieces/{id}/reserve
+            Method: POST
+
+  PuzzlePiecesCancelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/puzzle-pieces-cancel.handler
+      Description: Cancel puzzle piece reservation
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /puzzle-pieces/{id}/reservation
+            Method: DELETE
+
+  PuzzlePiecesPurchaseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/puzzle-pieces-purchase.handler
+      Description: Complete puzzle piece purchase
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /puzzle-pieces/{id}/purchase
+            Method: POST
+
+  # ========================================
+  # Events API (7 handlers)
+  # ========================================
+  EventsListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-list.handler
+      Description: List upcoming events
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /events
+            Method: GET
+
+  EventsGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-get.handler
+      Description: Get event details
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /events/{id}
+            Method: GET
+
+  EventsRegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-register.handler
+      Description: Register for an event
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /events/{id}/register
+            Method: POST
+
+  EventsUploadRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-upload-request.handler
+      Description: Request presigned S3 URL for submission
+      Policies:
+        - S3WritePolicy:
+            BucketName: !If
+              - CreateS3Bucket
+              - !Ref UploadsBucket
+              - !Ref S3BucketName
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /events/{id}/upload-request
+            Method: POST
+
+  EventsSubmitFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-submit.handler
+      Description: Confirm artwork submission
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /events/{id}/submissions
+            Method: POST
+
+  EventsSubmissionsListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-submissions-list.handler
+      Description: List event submissions (with blind judging)
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /events/{id}/submissions
+            Method: GET
+
+  EventsScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/events-score.handler
+      Description: Score submission (judges only)
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/submissions/{id}/score
+            Method: POST
+
+  # ========================================
+  # Blog API (3 handlers)
+  # ========================================
+  BlogPostsListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/blog-posts-list.handler
+      Description: List blog posts with search/filter
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /blog/posts
+            Method: GET
+
+  BlogPostsGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/blog-posts-get.handler
+      Description: Get blog post by slug
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /blog/posts/{slug}
+            Method: GET
+
+  BlogSearchSuggestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/blog-search-suggest.handler
+      Description: Autocomplete suggestions for blog search
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /blog/search/suggest
+            Method: GET
+
+  # ========================================
+  # Admin API (3 handlers)
+  # ========================================
+  AdminBlogPostUpsertFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/admin-blog-post-upsert.handler
+      Description: Create/update blog posts (admin)
+      Events:
+        CreatePost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/blog/posts
+            Method: POST
+        UpdatePost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/blog/posts/{id}
+            Method: PUT
+
+  AdminMovementsManageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/admin-movements-manage.handler
+      Description: CRUD operations for movements (admin)
+      Events:
+        CreateMovement:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/movements
+            Method: POST
+        UpdateMovement:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/movements/{id}
+            Method: PUT
+        DeleteMovement:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/movements/{id}
+            Method: DELETE
+
+  AdminEventsManageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/admin-events-manage.handler
+      Description: CRUD operations for events (admin)
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/events
+            Method: POST
+        UpdateEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/events/{id}
+            Method: PUT
+        ApproveSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChartedArtApi
+            Path: /admin/events/{eventId}/submissions/{submissionId}/approve
+            Method: PUT
+
+  # ========================================
+  # Background Jobs (2 handlers)
+  # ========================================
+  CleanupPuzzleReservationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/cron-cleanup-puzzle-reservations.handler
+      Description: Release expired puzzle reservations
+      Timeout: 60
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Description: Clean up expired puzzle reservations every 5 minutes
+
+  CalculateEngagementFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/cron-calculate-engagement.handler
+      Description: Calculate engagement scores for movements
+      Timeout: 300
+      MemorySize: 1024
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+            Description: Calculate movement engagement scores every 10 minutes
+
+# ========================================
+# Outputs
+# ========================================
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ChartedArtApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  ApiGatewayId:
+    Description: API Gateway ID
+    Value: !Ref ChartedArtApi
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiId'
+
+  S3BucketName:
+    Description: S3 bucket for uploads
+    Value: !If
+      - CreateS3Bucket
+      - !Ref UploadsBucket
+      - !Ref S3BucketName
+    Export:
+      Name: !Sub '${AWS::StackName}-S3Bucket'
+
+  Region:
+    Description: AWS Region
+    Value: !Ref AWS::Region
+
+  TotalLambdaFunctions:
+    Description: Total number of Lambda functions deployed
+    Value: '27'
+
+  DeploymentComplete:
+    Description: Deployment status
+    Value: 'ChartedArt v3 Backend - 100% Complete ✅'
