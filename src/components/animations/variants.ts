@@ -6,21 +6,28 @@
 import type { Variants } from 'framer-motion';
 
 /**
- * Page transition variants
+ * Page transition variants - subtle snap-in effect
  */
 export const pageTransition = {
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 50 },
-  transition: { duration: 0.5, ease: 'easeInOut' },
+  initial: { x: 12, scale: 0.97 },
+  animate: { x: 0, scale: 1 },
+  exit: { x: -12, scale: 0.97 },
+  transition: { 
+    duration: 0.25, 
+    ease: [0.34, 1.56, 0.64, 1], // Snap-in easing
+  },
 };
 
 /**
- * Button hover animation
+ * Button hover animation - snap effect
  */
 export const buttonHover = {
   scale: 1.05,
-  transition: { duration: 0.2, ease: 'easeOut' },
+  transition: { 
+    type: 'spring',
+    stiffness: 400,
+    damping: 17,
+  },
 };
 
 /**
@@ -31,39 +38,46 @@ export const buttonTap = {
 };
 
 /**
- * Fade in animation
+ * Gentle reveal animation with snap - replaces fade in
  */
-export const fadeIn: Variants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
+export const gentleReveal: Variants = {
+  initial: { y: 16, scale: 0.96 },
+  animate: { y: 0, scale: 1 },
+  exit: { y: -16, scale: 0.96 },
+  transition: { 
+    duration: 0.3,
+    ease: [0.34, 1.56, 0.64, 1], // Snap-in easing
+  },
 };
 
 /**
- * Slide up animation
+ * Slide up animation - no opacity
  */
 export const slideUp: Variants = {
-  initial: { opacity: 0, y: 50 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 50 },
+  initial: { y: 24 },
+  animate: { y: 0 },
+  exit: { y: -24 },
+  transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
 };
 
 /**
- * Slide down animation
+ * Slide down animation - no opacity
  */
 export const slideDown: Variants = {
-  initial: { opacity: 0, y: -50 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -50 },
+  initial: { y: -24 },
+  animate: { y: 0 },
+  exit: { y: 24 },
+  transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
 };
 
 /**
- * Scale animation
+ * Scale animation - subtle zoom only
  */
 export const scale: Variants = {
-  initial: { opacity: 0, scale: 0.8 },
-  animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.8 },
+  initial: { scale: 0.96 },
+  animate: { scale: 1 },
+  exit: { scale: 0.96 },
+  transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
 };
 
 /**
@@ -78,12 +92,17 @@ export const staggerChildren: Variants = {
 };
 
 /**
- * Gallery tile animation (hover)
+ * Gallery tile animation (hover) - snap effect
  */
 export const galleryTileHover = {
   scale: 1.05,
-  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
-  transition: { duration: 0.3, ease: 'easeOut' },
+  y: -4,
+  boxShadow: '0 12px 35px rgba(0, 0, 0, 0.15)',
+  transition: { 
+    type: 'spring',
+    stiffness: 300,
+    damping: 15,
+  },
 };
 
 /**
@@ -94,29 +113,50 @@ export const galleryTileTap = {
 };
 
 /**
- * Card hover animation
+ * Card hover animation - snap lift effect
  */
 export const cardHover = {
-  y: -5,
-  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-  transition: { duration: 0.3, ease: 'easeOut' },
+  y: -6,
+  scale: 1.02,
+  boxShadow: '0 12px 30px rgba(0, 0, 0, 0.12)',
+  transition: { 
+    type: 'spring',
+    stiffness: 350,
+    damping: 16,
+  },
 };
 
 /**
- * Modal/Dialog animation
+ * Modal/Dialog animation - snap-in pop effect
  */
 export const modal: Variants = {
-  initial: { opacity: 0, scale: 0.9, y: 20 },
-  animate: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.9, y: 20 },
+  initial: { scale: 0.92, y: 20 },
+  animate: { scale: 1, y: 0 },
+  exit: { scale: 0.92, y: 20 },
+  transition: { 
+    type: 'spring',
+    stiffness: 300,
+    damping: 20,
+  },
 };
 
 /**
- * Accordion/FAQ animation
+ * Modal backdrop - only backdrop uses opacity
+ */
+export const modalBackdrop: Variants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.15 },
+};
+
+/**
+ * Accordion/FAQ animation - height only for smooth expansion
  */
 export const accordion: Variants = {
-  collapsed: { height: 0, opacity: 0 },
-  expanded: { height: 'auto', opacity: 1 },
+  collapsed: { height: 0 },
+  expanded: { height: 'auto' },
+  transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
 };
 
 /**
@@ -128,12 +168,17 @@ export const chevronRotate: Variants = {
 };
 
 /**
- * Toast notification animation
+ * Toast notification animation - snap-in from edge
  */
 export const toast: Variants = {
-  initial: { opacity: 0, y: -50, scale: 0.3 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, scale: 0.5, transition: { duration: 0.2 } },
+  initial: { y: -100, x: '-50%', scale: 0.95 },
+  animate: { y: 0, x: '-50%', scale: 1 },
+  exit: { y: -100, x: '-50%', scale: 0.95 },
+  transition: { 
+    type: 'spring',
+    stiffness: 350,
+    damping: 22,
+  },
 };
 
 /**
@@ -197,12 +242,13 @@ export const formStatus = {
 };
 
 /**
- * List item stagger animation
+ * List item stagger animation - subtle slide
  */
 export const listItem: Variants = {
-  initial: { opacity: 0, x: -20 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: 20 },
+  initial: { x: -16, scale: 0.97 },
+  animate: { x: 0, scale: 1 },
+  exit: { x: 16, scale: 0.97 },
+  transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
 };
 
 /**

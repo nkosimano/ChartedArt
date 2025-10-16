@@ -1,7 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Settings, Archive, MessageSquare } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Settings, Archive, MessageSquare, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import ContactDialog from '@/components/ContactDialog';
 import { useCart } from '@/contexts/CartContext';
@@ -97,31 +96,15 @@ export default function RootLayout() {
                 </Link>
               )}
               
-              {/* Admin routes */}
+              {/* Admin Dashboard Button */}
               {isAdmin && (
-                <div className="flex items-center gap-4">
-                  <Link 
-                    to="/admin/orders" 
-                    className="text-charcoal-300 hover:text-sage-400 flex items-center gap-1"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Orders
-                  </Link>
-                  <Link 
-                    to="/admin/messages" 
-                    className="text-charcoal-300 hover:text-sage-400 flex items-center gap-1"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    Messages
-                  </Link>
-                  <Link 
-                    to="/admin/archive" 
-                    className="text-charcoal-300 hover:text-sage-400 flex items-center gap-1"
-                  >
-                    <Archive className="w-4 h-4" />
-                    Archive
-                  </Link>
-                </div>
+                <Link 
+                  to="/admin" 
+                  className="flex items-center gap-2 px-4 py-2 bg-sage-600 text-white rounded-md hover:bg-sage-700 transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Admin Dashboard
+                </Link>
               )}
             </div>
           </div>
@@ -211,23 +194,15 @@ export default function RootLayout() {
                 </Link>
               )}
 
-              {/* Admin routes */}
+              {/* Admin Dashboard */}
               {isAdmin && (
                 <Link 
-                  to="/admin/orders" 
-                  className="block text-lg text-charcoal-300 hover:text-sage-400"
+                  to="/admin" 
+                  className="flex items-center gap-2 px-4 py-3 bg-sage-600 text-white rounded-md hover:bg-sage-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
+                  <LayoutDashboard className="w-5 h-5" />
                   Admin Dashboard
-                </Link>
-              )}
-              {isAdmin && (
-                <Link 
-                  to="/admin/messages" 
-                  className="block text-lg text-charcoal-300 hover:text-sage-400"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Messages
                 </Link>
               )}
 
@@ -244,18 +219,9 @@ export default function RootLayout() {
         </div>
       </header>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.main
-          key={location.pathname}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="min-h-screen"
-        >
-          <Outlet />
-        </motion.main>
-      </AnimatePresence>
+      <main className="min-h-screen">
+        <Outlet />
+      </main>
 
       <footer className="bg-charcoal-300 text-cream-100 py-12">
         <div className="max-w-7xl mx-auto px-4">

@@ -89,12 +89,12 @@ export default function CreateScreen({ navigation }: CreateScreenProps) {
       setAddingToCart(true);
 
       // Call the backend API to add item to cart
+      // Note: Price is calculated server-side for security
       await apiClient.post('/cart', {
         imageUrl: uploadedImageUrl,
         name: `Custom Print - ${selectedSize.label}`,
         size: selectedSize.id,
         frame: selectedFrame.id,
-        price: calculatePrice(),
         quantity: 1,
       });
 

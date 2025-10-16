@@ -1,0 +1,180 @@
+{
+  "name": "ChartedArt - Custom Canvas Art",
+  "short_name": "ChartedArt",
+  "description": "Transform your images into beautiful custom canvas art with professional framing options.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#8FBC8F",
+  "background_color": "#FAF9F6",
+  "scope": "/",
+  "categories": ["shopping", "lifestyle", "art"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create Art",
+      "short_name": "Create",
+      "description": "Start creating your custom canvas art",
+      "url": "/create",
+      "icons": [
+        {
+          "src": "/icons/shortcut-create.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "View your order history",
+      "url": "/orders",
+      "icons": [
+        {
+          "src": "/icons/shortcut-orders.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Gallery",
+      "short_name": "Gallery",
+      "description": "Browse art gallery",
+      "url": "/gallery",
+      "icons": [
+        {
+          "src": "/icons/shortcut-gallery.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home-mobile.png",
+      "sizes": "375x667",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home screen showing featured artwork"
+    },
+    {
+      "src": "/screenshots/create-mobile.png",
+      "sizes": "375x667",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Create custom canvas art interface"
+    },
+    {
+      "src": "/screenshots/home-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop home page with product showcase"
+    }
+  ],
+  "related_applications": [],
+  "payment": {
+    "supported_methods": [
+      {
+        "supported_methods": "https://apple.com/apple-pay",
+        "data": {
+          "version": 3,
+          "merchantIdentifier": "merchant.com.chartedart.app",
+          "supportedNetworks": ["visa", "mastercard", "amex"],
+          "merchantCapabilities": ["supports3DS"]
+        }
+      },
+      {
+        "supported_methods": "https://google.com/pay",
+        "data": {
+          "environment": "TEST",
+          "apiVersion": 2,
+          "apiVersionMinor": 0,
+          "merchantInfo": {
+            "merchantId": "your-google-merchant-id",
+            "merchantName": "ChartedArt"
+          },
+          "allowedPaymentMethods": [
+            {
+              "type": "CARD",
+              "parameters": {
+                "allowedAuthMethods": ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+                "allowedCardNetworks": ["MASTERCARD", "VISA"]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["image/jpeg", "image/png", "image/webp"]
+        }
+      ]
+    }
+  }
+}

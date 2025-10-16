@@ -18,6 +18,22 @@ export interface Database {
           shipping_address: Json | null
           created_at: string
           updated_at: string
+          // Social features columns
+          bio: string | null
+          location: string | null
+          website: string | null
+          social_links: Json | null
+          artist_statement: string | null
+          specialties: string[] | null
+          years_active: number | null
+          education: string | null
+          commission_rate: number | null
+          accepts_commissions: boolean | null
+          is_verified: boolean | null
+          is_artist: boolean | null
+          // Push notification columns
+          push_token: string | null
+          push_token_updated_at: string | null
         }
         Insert: {
           id: string
@@ -27,6 +43,22 @@ export interface Database {
           shipping_address?: Json | null
           created_at?: string
           updated_at?: string
+          // Social features columns
+          bio?: string | null
+          location?: string | null
+          website?: string | null
+          social_links?: Json | null
+          artist_statement?: string | null
+          specialties?: string[] | null
+          years_active?: number | null
+          education?: string | null
+          commission_rate?: number | null
+          accepts_commissions?: boolean | null
+          is_verified?: boolean | null
+          is_artist?: boolean | null
+          // Push notification columns
+          push_token?: string | null
+          push_token_updated_at?: string | null
         }
         Update: {
           id?: string
@@ -36,6 +68,22 @@ export interface Database {
           shipping_address?: Json | null
           created_at?: string
           updated_at?: string
+          // Social features columns
+          bio?: string | null
+          location?: string | null
+          website?: string | null
+          social_links?: Json | null
+          artist_statement?: string | null
+          specialties?: string[] | null
+          years_active?: number | null
+          education?: string | null
+          commission_rate?: number | null
+          accepts_commissions?: boolean | null
+          is_verified?: boolean | null
+          is_artist?: boolean | null
+          // Push notification columns
+          push_token?: string | null
+          push_token_updated_at?: string | null
         }
       }
       products: {

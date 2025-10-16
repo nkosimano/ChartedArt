@@ -21,12 +21,15 @@ export const COLORS = {
 export const colors = {
   background: '#FFFFFF',
   surface: '#FFFFFF',
-  text: {
-    primary: '#1A1A1A',
-    secondary: '#6B7280',
-  },
+  text: '#1A1A1A',
+  textSecondary: '#6B7280',
   border: '#E5E7EB',
   error: '#EF4444',
+  primary: '#8B9A8B',
+  white: '#FFFFFF',
+  black: '#000000',
+  success: '#10B981',
+  info: '#3B82F6',
   sage: {
     400: '#8B9A8B',
   },

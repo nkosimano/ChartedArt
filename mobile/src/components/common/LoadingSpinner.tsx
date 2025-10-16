@@ -27,6 +27,6 @@ const styles = StyleSheet.create({
   message: {
     marginTop: spacing.md,
     fontSize: typography.fontSize.base,
-    color: colors.text.secondary,
+    color: colors.textSecondary,
   },
 });

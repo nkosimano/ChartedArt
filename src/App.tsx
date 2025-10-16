@@ -14,6 +14,7 @@ import BlogPage from './pages/BlogPage';
 import FAQPage from './pages/FAQPage';
 import ShippingPage from './pages/ShippingPage';
 import OrdersPage from './pages/OrdersPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import ArchivePage from './pages/ArchivePage';
 import AdminMessagesPage from './pages/AdminMessagesPage';
@@ -118,6 +119,11 @@ function App() {
         <Route path="/orders" element={
           <ProtectedRoute>
             <OrdersPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminDashboardPage />
           </ProtectedRoute>
         } />
         <Route path="/admin/orders" element={

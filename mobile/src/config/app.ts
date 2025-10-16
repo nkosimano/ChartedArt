@@ -11,10 +11,18 @@ export const APP_CONFIG = {
   STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
   
   // Feature Flags
-  USE_MOCK_DATA: process.env.EXPO_PUBLIC_USE_MOCK_DATA === 'true' || 
-                 process.env.EXPO_PUBLIC_API_URL?.includes('example.com') ||
-                 process.env.EXPO_PUBLIC_API_URL?.includes('your-api-gateway-url') ||
-                 false,
+  USE_MOCK_DATA: (() => {
+    // NEVER use mock data in production builds
+    if (!__DEV__ && process.env.NODE_ENV === 'production') {
+      return false;
+    }
+    
+    // Use mock data if explicitly enabled or API URL is not configured
+    return process.env.EXPO_PUBLIC_USE_MOCK_DATA === 'true' || 
+           !process.env.EXPO_PUBLIC_API_URL ||
+           process.env.EXPO_PUBLIC_API_URL?.includes('example.com') ||
+           process.env.EXPO_PUBLIC_API_URL?.includes('your-api-gateway-url');
+  })(),
   
   // Development Settings
   ENABLE_LOGGING: __DEV__ || process.env.EXPO_PUBLIC_ENABLE_LOGGING === 'true',
@@ -31,8 +39,19 @@ export const APP_CONFIG = {
 // Helper functions
 export const isDevelopment = () => __DEV__;
 export const isProduction = () => !__DEV__;
-export const shouldUseMockData = () => APP_CONFIG.USE_MOCK_DATA;
+export const shouldUseMockData = () => {
+  if (APP_CONFIG.USE_MOCK_DATA && !__DEV__) {
+    console.error('⚠️ CRITICAL: Mock data is enabled in production build!');
+  }
+  return APP_CONFIG.USE_MOCK_DATA;
+};
 export const shouldEnableLogging = () => APP_CONFIG.ENABLE_LOGGING;
+
+// Runtime warning for mock data
+if (APP_CONFIG.USE_MOCK_DATA) {
+  console.warn('⚠️ USING MOCK DATA - Not for production use');
+  console.warn('API URL:', APP_CONFIG.API_BASE_URL);
+}
 
 // API Endpoints (when real backend is available)
 export const API_ENDPOINTS = {

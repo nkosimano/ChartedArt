@@ -1,21 +1,15 @@
 const { createClient } = require('@supabase/supabase-js');
 const { verifyAdmin, errorResponse, successResponse } = require('../utils/auth');
-<<<<<<< HEAD
 const fetch = require('node-fetch');
-=======
->>>>>>> e4002856974d5c66721f668a6fc291ee96224278
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 
-<<<<<<< HEAD
 // Expo Push Notification API endpoint
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
-=======
->>>>>>> e4002856974d5c66721f668a6fc291ee96224278
 // Valid order statuses
 const VALID_STATUSES = [
   'pending',
@@ -28,7 +22,6 @@ const VALID_STATUSES = [
 ];
 
 /**
-<<<<<<< HEAD
  * Send push notification to user via Expo Push API
  */
 const sendPushNotification = async (pushToken, title, body, data = {}) => {
@@ -125,8 +118,6 @@ const getNotificationMessage = (status, orderId) => {
 };
 
 /**
-=======
->>>>>>> e4002856974d5c66721f668a6fc291ee96224278
  * Update order status (Admin only)
  * 
  * @param {Object} event - API Gateway event
@@ -206,7 +197,40 @@ exports.handler = async (event) => {
 
     console.log(`Order ${orderId} updated successfully to status: ${status}`);
 
-<<<<<<< HEAD
+    // CRITICAL: Restore inventory if order is cancelled or refunded
+    if ((status === 'cancelled' || status === 'refunded') && 
+        existingOrder.status !== 'cancelled' && 
+        existingOrder.status !== 'refunded') {
+      
+      console.log(`Restoring inventory for ${status} order ${orderId}...`);
+      
+      // Get all order items
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('product_id, quantity')
+        .eq('order_id', orderId);
+
+      if (itemsError) {
+        console.error('Error fetching order items for stock restoration:', itemsError);
+      } else if (orderItems && orderItems.length > 0) {
+        // Restore stock for each item
+        for (const item of orderItems) {
+          const { error: restoreError } = await supabase
+            .from('products')
+            .update({
+              stock_quantity: supabase.raw(`stock_quantity + ${item.quantity}`)
+            })
+            .eq('id', item.product_id);
+
+          if (restoreError) {
+            console.error(`Failed to restore stock for product ${item.product_id}:`, restoreError);
+          } else {
+            console.log(`Stock restored for product ${item.product_id}: +${item.quantity}`);
+          }
+        }
+      }
+    }
+
     // Send push notification if status changed and user has push token
     if (existingOrder.status !== status) {
       const { data: profile } = await supabase
@@ -232,8 +256,6 @@ exports.handler = async (event) => {
       }
     }
 
-=======
->>>>>>> e4002856974d5c66721f668a6fc291ee96224278
     // TODO: Send email notification to customer about status change
     // await sendOrderStatusEmail(updatedOrder);
 

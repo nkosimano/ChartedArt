@@ -13,9 +13,15 @@
       "bundleIdentifier": "com.chartedart.mobile",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to capture photos for custom art prints.",
-        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images for custom art prints.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "This app uses the camera to capture photos for custom art prints and AR visualization.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images for custom art prints and visual search.",
+        "NSFaceIDUsageDescription": "Use Face ID for secure and fast checkout.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
+      },
+      "usesAppleSignIn": false,
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -32,18 +38,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-notifications",
+      "expo-local-authentication",
       [
         "expo-image-picker",
         {
           "photosPermission": "The app accesses your photos to let you select images for custom art prints.",
           "cameraPermission": "The app accesses your camera to let you take photos for custom art prints."
-        }
-      ],
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.chartedart.mobile",
-          "enableGooglePay": true
         }
       ]
     ],

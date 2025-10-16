@@ -97,6 +97,58 @@ export default function CheckoutPage() {
         return;
       }
 
+      // CRITICAL: Revalidate cart items before placing order
+      console.log('Validating cart items...');
+      const productIds = items.map(item => item.product_id);
+      const { data: currentProducts, error: productsError } = await supabase
+        .from('products')
+        .select('id, name, price, stock_quantity, available')
+        .in('id', productIds);
+
+      if (productsError) {
+        throw new Error('Failed to validate cart items. Please try again.');
+      }
+
+      // Check each item in cart
+      const validationErrors: string[] = [];
+      for (const cartItem of items) {
+        const currentProduct = currentProducts?.find(p => p.id === cartItem.product_id);
+        
+        if (!currentProduct) {
+          validationErrors.push(`Product no longer available: ${cartItem.product_id}`);
+          continue;
+        }
+
+        if (!currentProduct.available) {
+          validationErrors.push(`${currentProduct.name} is no longer available`);
+          continue;
+        }
+
+        if (currentProduct.stock_quantity < (cartItem.quantity || 1)) {
+          validationErrors.push(
+            `Insufficient stock for ${currentProduct.name}. ` +
+            `Available: ${currentProduct.stock_quantity}, In cart: ${cartItem.quantity || 1}`
+          );
+          continue;
+        }
+
+        // Check if price has changed significantly (more than 1%)
+        const priceDiff = Math.abs(currentProduct.price - cartItem.price);
+        if (priceDiff > cartItem.price * 0.01) {
+          validationErrors.push(
+            `Price for ${currentProduct.name} has changed. ` +
+            `Was R${cartItem.price.toFixed(2)}, now R${currentProduct.price.toFixed(2)}`
+          );
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        throw new Error(
+          'Cart validation failed:\n' + validationErrors.join('\n') +
+          '\n\nPlease update your cart and try again.'
+        );
+      }
+
       // Prepare order data
       const orderData = {
         items: items.map(item => ({

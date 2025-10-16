@@ -77,13 +77,21 @@ exports.handler = async (event) => {
         return errorResponse(400, 'Invalid quantity');
       }
 
+      // CRITICAL: Check stock availability
+      if (product.stock_quantity < quantity) {
+        return errorResponse(400, 
+          `Insufficient stock for ${product.name}. Available: ${product.stock_quantity}, Requested: ${quantity}`
+        );
+      }
+
+      // Always use server-side price (security fix)
       const itemTotal = product.price * quantity;
       subtotal += itemTotal;
 
       validatedItems.push({
         product_id: product.id,
         quantity,
-        price: product.price,
+        price: product.price, // Use database price, not client price
         customization: item.customization || null
       });
     }
@@ -135,6 +143,43 @@ exports.handler = async (event) => {
       // Rollback: delete the order
       await supabase.from('orders').delete().eq('id', order.id);
       return errorResponse(500, 'Failed to create order items', itemsError.message);
+    }
+
+    // CRITICAL: Deduct stock for each item (atomic operation)
+    console.log('Deducting stock for order items...');
+    for (const item of validatedItems) {
+      const { data: updatedProduct, error: stockError } = await supabase
+        .from('products')
+        .update({
+          stock_quantity: supabase.raw(`stock_quantity - ${item.quantity}`)
+        })
+        .eq('id', item.product_id)
+        .gte('stock_quantity', item.quantity) // Ensure sufficient stock
+        .select('id, stock_quantity')
+        .single();
+
+      if (stockError || !updatedProduct) {
+        console.error(`Failed to deduct stock for product ${item.product_id}:`, stockError);
+        
+        // Rollback: delete order items and order
+        await supabase.from('order_items').delete().eq('order_id', order.id);
+        await supabase.from('orders').delete().eq('id', order.id);
+        
+        // Try to restore any stock that was already deducted
+        for (const prevItem of validatedItems) {
+          if (prevItem.product_id === item.product_id) break;
+          await supabase
+            .from('products')
+            .update({ stock_quantity: supabase.raw(`stock_quantity + ${prevItem.quantity}`) })
+            .eq('id', prevItem.product_id);
+        }
+        
+        return errorResponse(400, 
+          'Product out of stock. Another customer may have purchased it. Please try again.'
+        );
+      }
+      
+      console.log(`Stock deducted for product ${item.product_id}. New stock: ${updatedProduct.stock_quantity}`);
     }
 
     // Clear user's cart

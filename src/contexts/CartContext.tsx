@@ -30,17 +30,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const { data: cart } = await supabase
+      const { data: cart, error: cartError } = await supabase
         .from('carts')
         .select('id')
         .eq('user_id', session.user.id)
         .maybeSingle();
+
+      // If table doesn't exist (404), just set count to 0 and return
+      if (cartError && cartError.code === 'PGRST116') {
+        setItemCount(0);
+        setCartId(null);
+        return;
+      }
+
+      if (cartError) throw cartError;
 
       if (cart) {
         const { data: items, error: itemsError } = await supabase
           .from('cart_items')
           .select('*')
           .eq('cart_id', cart.id);
+
+        // If cart_items table doesn't exist, just set count to 0
+        if (itemsError && itemsError.code === 'PGRST116') {
+          setItemCount(0);
+          setCartId(cart.id);
+          return;
+        }
 
         if (itemsError) throw itemsError;
 
@@ -53,7 +69,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCartId(null);
       }
     } catch (error) {
-      console.error('Error fetching cart count:', error);
+      // Silently handle database errors for missing tables
+      console.log('Cart functionality not available:', error);
       setItemCount(0);
       setCartId(null);
     }
@@ -88,32 +105,39 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!userId) return;
 
-    // Subscribe to cart changes
-    const cartChannel = supabase.channel('cart_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cart_items'
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT' && cartId) {
-            setItemCount(prev => prev + 1);
-          } else if (payload.eventType === 'DELETE' && cartId) {
-            setItemCount(prev => Math.max(0, prev - 1));
-          } else {
-            // For other changes, refresh the count
-            updateItemCount();
+    // Only subscribe to cart changes if tables exist
+    let cartChannel: any;
+    try {
+      cartChannel = supabase.channel('cart_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'cart_items'
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT' && cartId) {
+              setItemCount(prev => prev + 1);
+            } else if (payload.eventType === 'DELETE' && cartId) {
+              setItemCount(prev => Math.max(0, prev - 1));
+            } else {
+              // For other changes, refresh the count
+              updateItemCount();
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (error) {
+      console.log('Cart realtime updates not available:', error);
+    }
 
     return () => {
-      cartChannel.unsubscribe();
+      if (cartChannel) {
+        cartChannel.unsubscribe();
+      }
     };
-  }, [userId]);
+  }, [userId, cartId]);
 
   return (
     <CartContext.Provider value={{ itemCount, updateItemCount }}>

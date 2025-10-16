@@ -30,11 +30,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '700',
-    color: colors.text.primary,
+    color: colors.text,
     marginBottom: spacing.sm,
   },
   subtitle: {
     fontSize: typography.fontSize.base,
-    color: colors.text.secondary,
+    color: colors.textSecondary,
   },
 });
