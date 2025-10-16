@@ -66,7 +66,7 @@ export function useRecommendations() {
           )
         `)
         .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
+        .order('viewed_at', { ascending: false })
         .limit(100);
 
       // Get purchase history

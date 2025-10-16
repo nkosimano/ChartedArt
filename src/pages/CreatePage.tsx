@@ -191,62 +191,15 @@ export default function CreatePage() {
         if (createProfileError) throw new Error('Failed to create user profile');
       }
 
-      const { data: existingCart } = await supabase
-        .from('carts')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      let cartId;
-      if (existingCart) {
-        cartId = existingCart.id;
-      } else {
-        const { data: newCart, error: cartError } = await supabase
-          .from('carts')
-          .insert([{ user_id: session.user.id }])
-          .select()
-          .single();
-
-        if (cartError) throw cartError;
-        cartId = newCart.id;
-      }
-
-      const { data: existingProduct, error: productQueryError } = await supabase
-        .from('products')
-        .select('id')
-        .eq('size', selectedSize.id)
-        .eq('frame_type', selectedFrame.id)
-        .maybeSingle();
-
-      if (productQueryError) throw productQueryError;
-
-      let productId;
-      if (existingProduct) {
-        productId = existingProduct.id;
-      } else {
-        const { data: newProduct, error: productError } = await supabase
-          .from('products')
-          .insert([{
-            size: selectedSize.id,
-            frame_type: selectedFrame.id,
-            base_price: totalPrice
-          }])
-          .select()
-          .single();
-
-        if (productError) {
-          console.error('Product creation error:', productError);
-          throw new Error('Failed to create product configuration');
-        }
-        productId = newProduct.id;
-      }
-
+      // Add item directly to cart_items - no parent carts table needed
       const { error: itemError } = await supabase
         .from('cart_items')
         .insert([{
-          cart_id: cartId,
-          product_id: productId,
+          user_id: session.user.id,
           image_url: image,
+          name: `Custom Print - ${selectedSize.name}`,
+          size: selectedSize.id,
+          frame: selectedFrame.id,
           price: totalPrice,
           quantity: 1
         }]);

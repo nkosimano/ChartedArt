@@ -47,28 +47,14 @@ export default function CheckoutPage() {
 
         setEmail(session.user.email || '');
 
-        const { data: cart, error: cartError } = await supabase
-          .from('carts')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
+        // Query cart_items directly - no parent carts table needed
+        const { data: cartItems, error: itemsError } = await supabase
+          .from('cart_items')
+          .select('*')
+          .eq('user_id', session.user.id);
 
-        if (cartError) throw cartError;
-
-        if (cart) {
-          const { data: cartItems, error: itemsError } = await supabase
-            .from('cart_items')
-            .select(`
-              *,
-              products (*)
-            `)
-            .eq('cart_id', cart.id);
-
-          if (itemsError) throw itemsError;
-          setItems(cartItems || []);
-        } else {
-          setItems([]);
-        }
+        if (itemsError) throw itemsError;
+        setItems(cartItems || []);
       } catch (err) {
         console.error('Error fetching cart:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');

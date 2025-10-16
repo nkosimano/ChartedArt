@@ -140,8 +140,41 @@ CREATE POLICY "Authors can manage own posts" ON blog_posts FOR ALL USING (auth.u
 -- ============================================
 
 -- Admin Users: Users can check their own admin status
-CREATE POLICY "Users can check own admin status" ON admin_users FOR SELECT 
+CREATE POLICY "Users can check own admin status" ON admin_users FOR SELECT
   USING (user_id = auth.uid() OR is_admin());
+
+-- Admin Users: Super admins can insert new admin users
+CREATE POLICY "Super admins can insert admin users" ON admin_users FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM admin_users
+      WHERE user_id = auth.uid()
+        AND is_active = true
+        AND role = 'super_admin'
+    )
+  );
+
+-- Admin Users: Super admins can update admin users
+CREATE POLICY "Super admins can update admin users" ON admin_users FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM admin_users
+      WHERE user_id = auth.uid()
+        AND is_active = true
+        AND role = 'super_admin'
+    )
+  );
+
+-- Admin Users: Super admins can delete admin users
+CREATE POLICY "Super admins can delete admin users" ON admin_users FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM admin_users
+      WHERE user_id = auth.uid()
+        AND is_active = true
+        AND role = 'super_admin'
+    )
+  );
 
 -- Messages: Users can view their own messages
 CREATE POLICY "Users can view own messages" ON messages FOR SELECT 
@@ -160,6 +193,14 @@ CREATE POLICY "Product owners can view analytics" ON product_analytics FOR SELEC
 
 -- User Browsing History: Users can view their own history
 CREATE POLICY "Users can view own browsing history" ON user_browsing_history FOR SELECT USING (auth.uid() = user_id);
+
+-- User Browsing History: Users can insert their own browsing history
+CREATE POLICY "Users can insert own browsing history" ON user_browsing_history FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- User Browsing History: Allow anonymous browsing history (for tracking before login)
+CREATE POLICY "Anonymous can insert browsing history" ON user_browsing_history FOR INSERT
+  WITH CHECK (user_id IS NULL);
 
 -- ============================================
 -- NOTIFICATION POLICIES
