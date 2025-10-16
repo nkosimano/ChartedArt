@@ -89,11 +89,10 @@ export default function OrderConfirmationPage() {
               event: 'UPDATE',
               schema: 'public',
               table: 'orders',
-              filter: `id=eq.${orders.id}`,
-              event: 'UPDATE'
+              filter: `id=eq.${orders.id}`
             },
             (payload: any) => {
-              setOrder(currentOrder => 
+              setOrder(currentOrder =>
                 currentOrder ? { ...currentOrder, ...payload.new } : null
               );
             }
