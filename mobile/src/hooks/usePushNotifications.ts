@@ -1,52 +1,31 @@
-import { useEffect, useState } from 'react';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
-import apiClient from '../lib/api/client';
+/**
+ * STUBBED VERSION - Push Notifications Disabled
+ *
+ * This is a stub implementation because expo-notifications was removed.
+ * Reason: Requires Apple Developer account ($99/year) for APNs keys.
+ *
+ * To re-enable:
+ * 1. Get Apple Developer account
+ * 2. npm install expo-notifications@~0.28.9
+ * 3. Restore original implementation from git history
+ * 4. Configure APNs keys in Apple Developer Portal
+ *
+ * Alternative: Use in-app notification center with database polling
+ */
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    // iOS specific behaviors
-    shouldShowBanner: true,
-    shouldShowList: true,
-  } as any),
-});
+import { useEffect } from 'react';
 
 export function usePushNotifications(enabled: boolean) {
-  const [token, setToken] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
-
   useEffect(() => {
-    if (!enabled) return;
-    (async () => {
-      try {
-        const settings = await Notifications.getPermissionsAsync();
-        let status = settings.status as string;
-        if (status !== 'granted') {
-          const req = await Notifications.requestPermissionsAsync();
-          status = req.status as string;
-        }
-        setPermissionStatus(status);
-        if (status !== 'granted') return;
-
-        const projectId = Notifications.getExpoPushTokenAsync.length
-          ? undefined
-          : undefined;
-        const expoToken = await Notifications.getExpoPushTokenAsync({ projectId: undefined as any });
-        const tokenStr = expoToken.data;
-        setToken(tokenStr);
-
-        await apiClient.post('/push-token', {
-          token: tokenStr,
-          platform: Platform.OS,
-        });
-      } catch (e) {
-        // Silently ignore
-      }
-    })();
+    if (enabled) {
+      console.log('📱 Push notifications are disabled (requires Apple Developer account)');
+      console.log('💡 Consider using in-app notification center instead');
+    }
   }, [enabled]);
 
-  return { token, permissionStatus };
+  return {
+    token: null,
+    permissionStatus: 'unavailable',
+    error: 'Push notifications require Apple Developer account and custom build'
+  };
 }

@@ -111,6 +111,42 @@ Line 112: event: 'UPDATE'
 
 ---
 
+#### 3. ✅ Mobile App - Missing Bottom Sheet Dependency
+**Error:**
+```
+Unable to resolve "@gorhom/bottom-sheet" from "src\components\movements\DonationSheet.tsx"
+```
+
+**Root Cause:**
+- The `@gorhom/bottom-sheet` package was not installed
+- The package requires `react-native-reanimated` version >= 3.16.0
+- The installed version was 3.10.1 (too old)
+
+**Solution:**
+1. Updated `react-native-reanimated` to the latest version
+2. Installed `@gorhom/bottom-sheet` package
+3. Added `react-native-reanimated/plugin` to babel.config.js
+4. Cleared Metro bundler cache and restarted
+
+**Commands Used:**
+```powershell
+cd mobile
+npm install react-native-reanimated@latest
+npm install @gorhom/bottom-sheet
+npx expo start --clear
+```
+
+**Files Modified:**
+- `mobile/babel.config.js` - Added reanimated plugin
+- `mobile/package.json` - Updated dependencies
+
+**Status:** ✅ RESOLVED
+- Bottom sheet component now resolves correctly
+- App bundles successfully for iOS
+- No dependency errors
+
+---
+
 ## Important Note
 
 The mobile app was **already properly configured** with:
@@ -146,6 +182,14 @@ The mobile app was **already properly configured** with:
 
 2. **mobile/.expo/** (directory)
    - Cleared cache to resolve stale module paths
+
+3. **mobile/babel.config.js**
+   - Added `react-native-reanimated/plugin` to plugins array
+   - Required for bottom sheet animations
+
+4. **mobile/package.json**
+   - Updated `react-native-reanimated` from 3.10.1 to latest
+   - Added `@gorhom/bottom-sheet` package
 
 ---
 

@@ -2,7 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { StripeProvider } from '@stripe/stripe-react-native';
+// REMOVED: Stripe requires custom native build - not compatible with Expo Go
+// import { StripeProvider } from '@stripe/stripe-react-native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import AuthStack from './src/navigation/AuthStack';
 import MainTabs from './src/navigation/MainTabs';
@@ -17,17 +18,16 @@ import EventDetailScreen from './src/screens/events/EventDetailScreen';
 import SubmissionScreen from './src/screens/events/SubmissionScreen';
 import MovementDetailScreen from './src/screens/movements/MovementDetailScreen';
 import PuzzlePieceGalleryScreen from './src/screens/puzzle/PuzzlePieceGalleryScreen';
-import { usePushNotifications } from './src/hooks/usePushNotifications';
+// REMOVED: Push notifications require Apple Developer account for APNs
+// import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { COLORS } from './src/constants/colors';
-
-const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 const Stack = createNativeStackNavigator();
 
 function RootNavigator() {
   const { user, loading } = useAuth();
-  // Register for push notifications when authenticated
-  usePushNotifications(!!user);
+  // REMOVED: Push notifications require Apple Developer account
+  // usePushNotifications(!!user);
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -115,13 +115,11 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-      <AuthProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
-      </AuthProvider>
-    </StripeProvider>
+    <AuthProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 
