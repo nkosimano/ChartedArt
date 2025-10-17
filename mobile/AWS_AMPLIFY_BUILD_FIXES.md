@@ -23,15 +23,34 @@
 
 **Configuration Details:**
 ```yaml
-- Installs dependencies with npm ci --legacy-peer-deps
+- Installs dependencies with npm install --legacy-peer-deps
 - Builds Expo web version with npx expo export:web
 - Outputs to mobile/web-build directory
 - Caches node_modules for faster builds
 ```
 
+**Note:** Using `npm install` instead of `npm ci` because `package-lock.json` is gitignored in the mobile directory.
+
 ---
 
-### 3. ⚠️ Deprecated Babel Plugins (Warnings Only)
+### 3. ✅ package-lock.json Gitignored Issue
+**Problem:** The `mobile/.gitignore` file excludes `package-lock.json`, which prevents using `npm ci` in CI/CD environments.
+
+**Why This Matters:**
+- `npm ci` requires a committed `package-lock.json` file
+- The lock file ensures consistent dependency versions across environments
+- Without it, builds may have version inconsistencies
+
+**Current Solution:** Using `npm install --legacy-peer-deps` in `amplify.yml`
+
+**Recommended Long-term Fix:**
+1. Remove `package-lock.json` from `.gitignore`
+2. Commit the lock file to the repository
+3. Update `amplify.yml` to use `npm ci --legacy-peer-deps`
+
+---
+
+### 4. ⚠️ Deprecated Babel Plugins (Warnings Only)
 **Problem:** Several Babel plugins show deprecation warnings:
 - `@babel/plugin-proposal-class-properties`
 - `@babel/plugin-proposal-nullish-coalescing-operator`
@@ -45,7 +64,7 @@
 
 ---
 
-### 4. ⚠️ ESLint Deprecation Warning
+### 5. ⚠️ ESLint Deprecation Warning
 **Problem:** ESLint 8.57.1 is deprecated and no longer supported.
 
 **Status:** Warning only, doesn't prevent builds.
@@ -129,14 +148,16 @@ Once you push the changes, AWS Amplify will automatically detect the new commit 
 ### Issues Identified:
 1. ❌ No amplify.yml configuration
 2. ❌ Git merge conflict in package.json
-3. ⚠️ Deprecated Babel plugins (warnings)
-4. ⚠️ ESLint deprecation (warning)
+3. ❌ package-lock.json gitignored (prevents npm ci)
+4. ⚠️ Deprecated Babel plugins (warnings)
+5. ⚠️ ESLint deprecation (warning)
 
 ### What's Fixed:
-1. ✅ amplify.yml created
+1. ✅ amplify.yml created with npm install
 2. ✅ package.json merge conflict resolved
-3. ⚠️ Babel warnings (from dependencies, non-blocking)
-4. ⚠️ ESLint warning (non-blocking)
+3. ✅ amplify.yml uses npm install (works without lock file)
+4. ⚠️ Babel warnings (from dependencies, non-blocking)
+5. ⚠️ ESLint warning (non-blocking)
 
 ---
 

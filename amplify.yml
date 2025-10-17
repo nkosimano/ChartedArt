@@ -8,7 +8,7 @@ frontend:
       commands:
         - echo "Installing dependencies..."
         - cd mobile
-        - npm ci --legacy-peer-deps
+        - npm install --legacy-peer-deps
         - echo "Dependencies installed successfully"
     build:
       commands:
