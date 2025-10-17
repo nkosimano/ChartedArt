@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import FacebookAnalytics from './src/services/FacebookAnalytics';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 // REMOVED: Stripe requires custom native build - not compatible with Expo Go
 // import { StripeProvider } from '@stripe/stripe-react-native';
@@ -28,6 +29,11 @@ function RootNavigator() {
   const { user, loading } = useAuth();
   // REMOVED: Push notifications require Apple Developer account
   // usePushNotifications(!!user);
+  
+  // Initialize Facebook Analytics
+  useEffect(() => {
+    FacebookAnalytics.initialize();
+  }, []);
 
   // Show loading spinner while checking auth state
   if (loading) {
