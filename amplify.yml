@@ -1,26 +1,24 @@
 version: 1
-# AWS Amplify build configuration for ChartedArt Mobile App
-# This file defines how AWS Amplify should build the React Native/Expo app
+# AWS Amplify build configuration for ChartedArt Web App
+# This file defines how AWS Amplify should build the React/Vite web application
 
 frontend:
   phases:
     preBuild:
       commands:
         - echo "Installing dependencies..."
-        - cd mobile
         - npm install --legacy-peer-deps
         - echo "Dependencies installed successfully"
     build:
       commands:
-        - echo "Building Expo web version..."
-        - npx expo export --platform web
+        - echo "Building web application with Vite..."
+        - npm run build
         - echo "Build completed successfully"
   artifacts:
-    baseDirectory: mobile/dist
+    baseDirectory: dist
     files:
       - '**/*'
   cache:
     paths:
-      - mobile/node_modules/**/*
       - node_modules/**/*
 
