@@ -1,25 +1,22 @@
-import { Settings } from 'react-native-fbsdk-next';
+// STUB: Facebook Analytics has been disabled for Expo Go compatibility
+// The react-native-fbsdk-next package requires custom native builds
+// This stub prevents build errors while maintaining the same API
 
 const FACEBOOK_APP_ID = '2050447882394265';
 
 class FacebookAnalytics {
   static initialize() {
-    // Initialize Facebook SDK
-    Settings.initializeSDK();
-    Settings.setAppID(FACEBOOK_APP_ID);
-    Settings.setAutoLogAppEventsEnabled(true);
-    Settings.setAdvertiserIDCollectionEnabled(true);
-    Settings.setAdvertiserTrackingEnabled(true);
+    // No-op: Facebook SDK initialization disabled for Expo Go
+    if (__DEV__) {
+      console.log('[FacebookAnalytics] Stub mode - Facebook SDK disabled for Expo Go compatibility');
+    }
   }
 
   static logEvent(eventName: string, parameters?: Record<string, any>) {
-    import('react-native-fbsdk-next').then(({ AppEventsLogger }) => {
-      if (parameters) {
-        AppEventsLogger.logEvent(eventName, parameters);
-      } else {
-        AppEventsLogger.logEvent(eventName);
-      }
-    });
+    // No-op: Event logging disabled for Expo Go
+    if (__DEV__) {
+      console.log('[FacebookAnalytics] Event:', eventName, parameters);
+    }
   }
 
   static logPageView(pageName: string) {

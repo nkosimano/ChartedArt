@@ -16,8 +16,7 @@
         "NSCameraUsageDescription": "This app uses the camera to capture photos for custom art prints and AR visualization.",
         "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images for custom art prints and visual search.",
         "NSFaceIDUsageDescription": "Use Face ID for secure and fast checkout.",
-        "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["remote-notification"]
+        "ITSAppUsesNonExemptEncryption": false
       },
       "usesAppleSignIn": false,
       "config": {
@@ -37,7 +36,6 @@
     "web": {},
     "plugins": [
       "expo-secure-store",
-      "expo-notifications",
       "expo-local-authentication",
       [
         "expo-image-picker",
