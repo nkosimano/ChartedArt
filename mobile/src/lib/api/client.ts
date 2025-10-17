@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { 
   mockUser, 
@@ -11,6 +12,9 @@ import { APP_CONFIG, shouldUseMockData, shouldEnableLogging } from '../../config
 
 const API_BASE_URL = APP_CONFIG.API_BASE_URL;
 const USE_MOCK_DATA = shouldUseMockData();
+
+// Detect if running on web
+const isWeb = Platform.OS === 'web';
 
 interface RequestConfig {
   headers?: Record<string, string>;
@@ -26,7 +30,11 @@ class APIClient {
 
   private async getAuthToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync('auth_token');
+      if (isWeb) {
+        return window.localStorage.getItem('auth_token');
+      } else {
+        return await SecureStore.getItemAsync('auth_token');
+      }
     } catch (error) {
       console.error('Error retrieving auth token:', error);
       return null;
@@ -84,7 +92,11 @@ class APIClient {
       // Handle authentication errors
       if (response.status === 401) {
         // Clear stored token
-        await SecureStore.deleteItemAsync('auth_token');
+        if (isWeb) {
+          window.localStorage.removeItem('auth_token');
+        } else {
+          await SecureStore.deleteItemAsync('auth_token');
+        }
         throw new Error('Session expired. Please log in again.');
       }
 

@@ -1,36 +1,56 @@
 import { createClient, Session, User, AuthError } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Custom storage adapter for expo-secure-store
-const ExpoSecureStoreAdapter = {
+// Detect if running on web
+const isWeb = Platform.OS === 'web';
+
+// Custom storage adapter that uses localStorage on web and SecureStore on native
+const StorageAdapter = {
   getItem: async (key: string) => {
     try {
-      return await SecureStore.getItemAsync(key);
+      if (isWeb) {
+        // Use localStorage on web
+        return window.localStorage.getItem(key);
+      } else {
+        // Use SecureStore on native
+        return await SecureStore.getItemAsync(key);
+      }
     } catch (error) {
-      console.warn('SecureStore getItem error:', error);
+      console.warn('Storage getItem error:', error);
       return null;
     }
   },
   setItem: async (key: string, value: string) => {
     try {
-      // If value is too large, truncate or handle differently
-      if (value.length > 2048) {
-        console.warn('SecureStore value too large, storing truncated version');
-        // For now, just store it anyway - the warning is just informational
+      if (isWeb) {
+        // Use localStorage on web
+        window.localStorage.setItem(key, value);
+      } else {
+        // Use SecureStore on native
+        if (value.length > 2048) {
+          console.warn('SecureStore value too large, storing truncated version');
+        }
+        await SecureStore.setItemAsync(key, value);
       }
-      await SecureStore.setItemAsync(key, value);
     } catch (error) {
-      console.warn('SecureStore setItem error:', error);
+      console.warn('Storage setItem error:', error);
     }
   },
   removeItem: async (key: string) => {
     try {
-      await SecureStore.deleteItemAsync(key);
+      if (isWeb) {
+        // Use localStorage on web
+        window.localStorage.removeItem(key);
+      } else {
+        // Use SecureStore on native
+        await SecureStore.deleteItemAsync(key);
+      }
     } catch (error) {
-      console.warn('SecureStore removeItem error:', error);
+      console.warn('Storage removeItem error:', error);
     }
   },
 };
@@ -38,7 +58,7 @@ const ExpoSecureStoreAdapter = {
 // Create Supabase client with secure storage
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: ExpoSecureStoreAdapter,
+    storage: StorageAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
@@ -63,7 +83,11 @@ export const supabaseAuth = {
 
       // Store auth token for API client
       if (data.session?.access_token) {
-        await SecureStore.setItemAsync('auth_token', data.session.access_token);
+        if (isWeb) {
+          window.localStorage.setItem('auth_token', data.session.access_token);
+        } else {
+          await SecureStore.setItemAsync('auth_token', data.session.access_token);
+        }
       }
 
       return { session: data.session, error: null };
@@ -92,7 +116,11 @@ export const supabaseAuth = {
 
       // Store auth token for API client
       if (data.session?.access_token) {
-        await SecureStore.setItemAsync('auth_token', data.session.access_token);
+        if (isWeb) {
+          window.localStorage.setItem('auth_token', data.session.access_token);
+        } else {
+          await SecureStore.setItemAsync('auth_token', data.session.access_token);
+        }
       }
 
       return { session: data.session, error: null };
@@ -141,8 +169,12 @@ export const supabaseAuth = {
     try {
       const { error } = await supabase.auth.signOut();
 
-      // Clear auth token from secure storage
-      await SecureStore.deleteItemAsync('auth_token');
+      // Clear auth token from storage
+      if (isWeb) {
+        window.localStorage.removeItem('auth_token');
+      } else {
+        await SecureStore.deleteItemAsync('auth_token');
+      }
 
       return { error };
     } catch (error) {
@@ -195,11 +227,19 @@ export const supabaseAuth = {
   onAuthStateChange: (callback: (session: Session | null) => void) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Update auth token in secure storage when session changes
+        // Update auth token in storage when session changes
         if (session?.access_token) {
-          await SecureStore.setItemAsync('auth_token', session.access_token);
+          if (isWeb) {
+            window.localStorage.setItem('auth_token', session.access_token);
+          } else {
+            await SecureStore.setItemAsync('auth_token', session.access_token);
+          }
         } else {
-          await SecureStore.deleteItemAsync('auth_token');
+          if (isWeb) {
+            window.localStorage.removeItem('auth_token');
+          } else {
+            await SecureStore.deleteItemAsync('auth_token');
+          }
         }
 
         callback(session);
