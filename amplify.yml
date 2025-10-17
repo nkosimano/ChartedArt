@@ -13,10 +13,10 @@ frontend:
     build:
       commands:
         - echo "Building Expo web version..."
-        - npx expo export:web
+        - npx expo export --platform web
         - echo "Build completed successfully"
   artifacts:
-    baseDirectory: mobile/web-build
+    baseDirectory: mobile/dist
     files:
       - '**/*'
   cache:
