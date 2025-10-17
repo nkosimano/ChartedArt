@@ -6,12 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  ScrollView,
+  Platform,
 } from 'react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useStripe } from '@stripe/stripe-react-native';
 
 export interface DonationSheetProps {
   isOpen: boolean;
@@ -23,6 +22,28 @@ export interface DonationSheetProps {
 
 const PRESET_AMOUNTS = [10, 25, 50, 100, 250, 500];
 
+// Mock stripe hook for web platform
+const useMockStripe = () => ({
+  initPaymentSheet: async () => ({ error: { message: 'Stripe not available on web' } }),
+  presentPaymentSheet: async () => ({ error: { code: 'Canceled', message: 'Stripe not available on web' } }),
+});
+
+// Get the appropriate hook based on platform
+const getStripeHook = () => {
+  if (Platform.OS === 'web') {
+    return useMockStripe;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useStripe } = require('@stripe/stripe-react-native');
+    return useStripe;
+  } catch {
+    return useMockStripe;
+  }
+};
+
+const useStripeHook = getStripeHook();
+
 export const DonationSheet: React.FC<DonationSheetProps> = ({
   isOpen,
   onClose,
@@ -32,7 +53,9 @@ export const DonationSheet: React.FC<DonationSheetProps> = ({
 }) => {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['75%', '90%'], []);
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  
+  // Use the platform-appropriate Stripe hook
+  const { initPaymentSheet, presentPaymentSheet } = useStripeHook();
 
   const [amount, setAmount] = useState<number>(50);
   const [customAmount, setCustomAmount] = useState<string>('');
@@ -62,6 +85,12 @@ export const DonationSheet: React.FC<DonationSheetProps> = ({
   };
 
   const initializePaymentSheet = async () => {
+    // Web platform doesn't support Stripe native payments
+    if (Platform.OS === 'web') {
+      setError('Payment processing is only available in the mobile app');
+      return false;
+    }
+
     try {
       const response = await fetch('/api/movements/create-donation-intent', {
         method: 'POST',
@@ -100,6 +129,12 @@ export const DonationSheet: React.FC<DonationSheetProps> = ({
   const handleDonate = async () => {
     if (amount < 1) {
       setError('Please enter an amount of at least $1');
+      return;
+    }
+
+    // Show alert on web platform
+    if (Platform.OS === 'web') {
+      setError('Donations are only available in the ChartedArt mobile app. Please download the app to contribute.');
       return;
     }
 

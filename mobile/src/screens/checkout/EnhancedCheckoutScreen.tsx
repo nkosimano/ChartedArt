@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useStripe } from '@stripe/stripe-react-native';
 import { useCart } from '@/hooks/useCart';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { apiClient } from '@/lib/api/client';
@@ -18,12 +17,34 @@ import HapticFeedback from '@/lib/haptics';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 
+// Mock stripe hook for web platform
+const useMockStripe = () => ({
+  initPaymentSheet: async () => ({ error: { message: 'Stripe not available on web' } }),
+  presentPaymentSheet: async () => ({ error: { code: 'Canceled', message: 'Stripe not available on web' } }),
+});
+
+// Get the appropriate hook based on platform
+const getStripeHook = () => {
+  if (Platform.OS === 'web') {
+    return useMockStripe;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useStripe } = require('@stripe/stripe-react-native');
+    return useStripe;
+  } catch {
+    return useMockStripe;
+  }
+};
+
+const useStripeHook = getStripeHook();
+
 interface EnhancedCheckoutScreenProps {
   navigation: any;
 }
 
 export default function EnhancedCheckoutScreen({ navigation }: EnhancedCheckoutScreenProps) {
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { initPaymentSheet, presentPaymentSheet } = useStripeHook();
   const { cartItems, totalAmount, itemCount, clearCart } = useCart();
   const {
     isAvailable: isBiometricAvailable,
