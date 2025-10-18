@@ -1,10 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  ChartedArt Backend Services
-  Serverless API with Lambda functions, API Gateway, and S3 storage
+Description: 'ChartedArt Backend Services Serverless API with Lambda functions, API
+  Gateway, and S3 storage
 
-# Global configuration for all Lambda functions
+  '
 Globals:
   Function:
     Timeout: 10
@@ -12,172 +11,166 @@ Globals:
     Runtime: nodejs20.x
     Environment:
       Variables:
-        SUPABASE_URL: !Ref SupabaseUrl
-        SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+        SUPABASE_URL:
+          Ref: SupabaseUrl
+        SUPABASE_SERVICE_KEY:
+          Ref: SupabaseServiceKey
         NODE_ENV: production
     Architectures:
-      - x86_64
-
-# Parameters for sensitive configuration
+    - x86_64
 Parameters:
   SupabaseUrl:
     Type: String
     Description: The URL for the Supabase project
     Default: https://uuqfobbkjhrpylygauwf.supabase.co
-  
   SupabaseServiceKey:
     Type: String
     Description: The service role key for Supabase (KEEP SECRET)
     NoEcho: true
-  
   Environment:
     Type: String
     Description: Environment name (dev, staging, production)
     Default: dev
     AllowedValues:
-      - dev
-      - staging
-      - production
-
+    - dev
+    - staging
+    - production
 Resources:
-  # API Gateway with CORS and rate limiting
   ChartedArtApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
       Cors:
-        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
-        AllowOrigin: "'*'"  # TODO: In production, replace with actual domain
-        MaxAge: "'600'"
-      # Rate limiting and throttling
+        AllowMethods: '''GET,POST,PUT,DELETE,OPTIONS'''
+        AllowHeaders: '''Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'''
+        AllowOrigin: '''*'''
+        MaxAge: '''600'''
       MethodSettings:
-        - ResourcePath: '/*'
-          HttpMethod: '*'
-          ThrottlingBurstLimit: 100
-          ThrottlingRateLimit: 50
-      # Models for request validation
+      - ResourcePath: /*
+        HttpMethod: '*'
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
       Models:
         OrderRequest:
           type: object
           required:
-            - items
-            - shipping_address
+          - items
+          - shipping_address
           properties:
             items:
               type: array
             shipping_address:
               type: object
-
-  # CloudWatch Log Group for API Gateway
   ApiGatewayLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/apigateway/${ChartedArtApi}'
+      LogGroupName:
+        Fn::Sub: /aws/apigateway/${ChartedArtApi}
       RetentionInDays: 30
-
-  # Lambda Function: Get Orders (Admin)
   GetOrdersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/handlers/
+      CodeUri: GetOrdersFunction
       Handler: get-orders.handler
       Description: Get all orders (admin only)
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            RestApiId: !Ref ChartedArtApi
+            RestApiId:
+              Ref: ChartedArtApi
             Path: /admin/orders
             Method: GET
-
-  # CloudWatch Log Group for GetOrdersFunction
+    Metadata:
+      SamResourceId: GetOrdersFunction
   GetOrdersFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${GetOrdersFunction}'
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${GetOrdersFunction}
       RetentionInDays: 30
-
-  # Lambda Function: Update Order Status (Admin)
   UpdateOrderStatusFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/handlers/
+      CodeUri: UpdateOrderStatusFunction
       Handler: update-order-status.handler
       Description: Update order status (admin only)
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            RestApiId: !Ref ChartedArtApi
+            RestApiId:
+              Ref: ChartedArtApi
             Path: /admin/orders/{id}
             Method: PUT
-
-  # CloudWatch Log Group for UpdateOrderStatusFunction
+    Metadata:
+      SamResourceId: UpdateOrderStatusFunction
   UpdateOrderStatusFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${UpdateOrderStatusFunction}'
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${UpdateOrderStatusFunction}
       RetentionInDays: 30
-
-  # Lambda Function: Create Order
   CreateOrderFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/handlers/
+      CodeUri: CreateOrderFunction
       Handler: create-order.handler
       Description: Create a new order
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            RestApiId: !Ref ChartedArtApi
+            RestApiId:
+              Ref: ChartedArtApi
             Path: /orders
             Method: POST
-
-  # CloudWatch Log Group for CreateOrderFunction
+    Metadata:
+      SamResourceId: CreateOrderFunction
   CreateOrderFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${CreateOrderFunction}'
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${CreateOrderFunction}
       RetentionInDays: 30
-
-  # Lambda Function: Register Push Token
   RegisterPushTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/handlers/
+      CodeUri: RegisterPushTokenFunction
       Handler: register-push-token.handler
       Description: Register push notification token for user
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            RestApiId: !Ref ChartedArtApi
+            RestApiId:
+              Ref: ChartedArtApi
             Path: /push-token
             Method: POST
-
-  # CloudWatch Log Group for RegisterPushTokenFunction
+    Metadata:
+      SamResourceId: RegisterPushTokenFunction
   RegisterPushTokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${RegisterPushTokenFunction}'
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${RegisterPushTokenFunction}
       RetentionInDays: 30
-
-# Outputs for easy reference
 Outputs:
   ApiGatewayUrl:
-    Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ChartedArtApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${ChartedArtApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
     Export:
-      Name: !Sub "${AWS::StackName}-ApiUrl"
-  
+      Name:
+        Fn::Sub: ${AWS::StackName}-ApiUrl
   ApiGatewayId:
-    Description: "API Gateway ID"
-    Value: !Ref ChartedArtApi
+    Description: API Gateway ID
+    Value:
+      Ref: ChartedArtApi
     Export:
-      Name: !Sub "${AWS::StackName}-ApiId"
-  
+      Name:
+        Fn::Sub: ${AWS::StackName}-ApiId
   Region:
-    Description: "AWS Region"
-    Value: !Ref AWS::Region
+    Description: AWS Region
+    Value:
+      Ref: AWS::Region
