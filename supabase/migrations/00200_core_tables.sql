@@ -132,10 +132,18 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- ============================================
 -- 5. CART ITEMS TABLE
 -- ============================================
+-- Supports both regular products (product_id) and custom prints (image_url + custom fields)
 CREATE TABLE IF NOT EXISTS cart_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  
+  -- Custom Print Fields (NULL for regular products)
+  image_url TEXT,
+  name VARCHAR(255),
+  size VARCHAR(100),
+  frame VARCHAR(100),
+  price DECIMAL(10,2) CHECK (price >= 0),
   
   -- Cart Details
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
@@ -144,8 +152,12 @@ CREATE TABLE IF NOT EXISTS cart_items (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
-  -- Ensure one cart item per user per product
-  UNIQUE(user_id, product_id)
+  -- Constraint: Must have either product_id OR custom print fields
+  CONSTRAINT cart_items_product_or_custom_check CHECK (
+    (product_id IS NOT NULL AND image_url IS NULL AND name IS NULL AND size IS NULL AND frame IS NULL AND price IS NULL)
+    OR
+    (product_id IS NULL AND image_url IS NOT NULL AND name IS NOT NULL AND size IS NOT NULL AND frame IS NOT NULL AND price IS NOT NULL)
+  )
 );
 
 -- ============================================
@@ -281,7 +293,7 @@ COMMENT ON TABLE profiles IS 'User profiles extending auth.users with additional
 COMMENT ON TABLE products IS 'Product catalog with NEW schema (name, description, price, stock_quantity)';
 COMMENT ON TABLE orders IS 'Customer orders';
 COMMENT ON TABLE order_items IS 'Line items for orders';
-COMMENT ON TABLE cart_items IS 'Shopping cart items';
+COMMENT ON TABLE cart_items IS 'Shopping cart items - supports both regular products and custom prints';
 COMMENT ON TABLE testimonials IS 'Customer testimonials and reviews';
 COMMENT ON TABLE events IS 'Events and exhibitions';
 COMMENT ON TABLE blog_posts IS 'Blog posts and articles';

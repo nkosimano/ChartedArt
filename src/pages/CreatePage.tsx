@@ -83,7 +83,7 @@ export default function CreatePage() {
       // Step 1: Get presigned URL from backend
       console.log('Requesting presigned URL for file upload...');
       try {
-        const { uploadUrl, fileKey } = await api.uploads.getUrl(
+        const { uploadUrl, fileKey } = await api.uploads.generateUrl(
           file.name,
           file.type,
           file.size

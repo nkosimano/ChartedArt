@@ -104,14 +104,19 @@ export default function ProductPage() {
       }
 
       // Add to cart in database
+      // For regular products, only send product_id and quantity
+      // Price will be fetched from products table when needed
       const { error } = await supabase.from('cart_items').insert({
         user_id: session.user.id,
         product_id: product.id,
         quantity: quantity,
-        price: product.price,
+        // DO NOT include price, image_url, name, size, frame for regular products
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Cart insert error:', error);
+        throw error;
+      }
 
       // Track add to cart event
       trackAddToCart({
