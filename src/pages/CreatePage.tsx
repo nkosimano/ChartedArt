@@ -177,11 +177,14 @@ export default function CreatePage() {
       }
 
       // Add item directly to cart_items - no parent carts table needed
+      // TODO: Once S3 upload Lambda is deployed, upload image first and use the S3 URL
+      const imageUrl = imagePath || 'pending-upload';
+      
       const { error: itemError } = await supabase
         .from('cart_items')
         .insert([{
           user_id: session.user.id,
-          image_url: image,
+          image_url: imageUrl,
           name: `Custom Print - ${selectedSize.name}`,
           size: selectedSize.id,
           frame: selectedFrame.id,

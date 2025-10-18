@@ -12,11 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { DollarSign, Heart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+// import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+// import { loadStripe } from '@stripe/stripe-js';
 
 // Initialize Stripe (you'll need to set your publishable key)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+// const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 export interface DonationModalProps {
   isOpen: boolean;
@@ -33,13 +33,9 @@ const DonationForm: React.FC<{
   movementTitle: string;
   onSuccess?: (amount: number) => void;
   onClose: () => void;
-}> = ({ movementId, movementTitle, onSuccess, onClose }) => {
-  const stripe = useStripe();
-  const elements = useElements();
+}> = ({ movementId, onSuccess, onClose }) => {
   const [amount, setAmount] = useState<number>(50);
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleAmountSelect = (value: number) => {
     setAmount(value);
@@ -56,56 +52,10 @@ const DonationForm: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    if (amount < 1) {
-      setError('Please enter an amount of at least $1');
-      return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      // Create payment intent on your backend
-      const response = await fetch('/api/movements/create-donation-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          movementId,
-          amount: Math.round(amount * 100), // Convert to cents
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create payment intent');
-      }
-
-      const { clientSecret } = await response.json();
-
-      // Confirm the payment
-      const { error: stripeError } = await stripe.confirmPayment({
-        elements,
-        clientSecret,
-        confirmParams: {
-          return_url: `${window.location.origin}/movements/${movementId}?donation=success`,
-        },
-      });
-
-      if (stripeError) {
-        setError(stripeError.message || 'Payment failed');
-      } else {
-        onSuccess?.(amount);
-        onClose();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsProcessing(false);
-    }
+    // TODO: Implement cash/bank transfer payment flow
+    alert(`Thank you for your interest in donating $${amount.toFixed(2)}! Cash payment options coming soon.`);
+    onSuccess?.(amount);
+    onClose();
   };
 
   return (
@@ -147,36 +97,23 @@ const DonationForm: React.FC<{
           <p className="text-sm text-muted-foreground mb-1">Your donation</p>
           <p className="text-3xl font-bold">${amount.toFixed(2)}</p>
         </div>
-      </div>
 
-      {/* Stripe Payment Element */}
-      <div className="space-y-2">
-        <Label>Payment details</Label>
-        <PaymentElement />
-      </div>
-
-      {error && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
-          {error}
+        {/* Cash Payment Notice */}
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+          <p className="text-sm text-blue-900 dark:text-blue-100">
+            <strong>Cash Payment:</strong> We currently accept cash payments only. 
+            Contact information will be provided after submitting.
+          </p>
         </div>
-      )}
+      </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>
+        <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isProcessing || !stripe}>
-          {isProcessing ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Heart className="w-4 h-4 mr-2" />
-              Donate ${amount.toFixed(2)}
-            </>
-          )}
+        <Button type="submit">
+          <Heart className="w-4 h-4 mr-2" />
+          Continue with Cash Payment
         </Button>
       </DialogFooter>
     </form>
@@ -201,14 +138,12 @@ export const DonationModal: React.FC<DonationModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Elements stripe={stripePromise}>
-          <DonationForm
-            movementId={movementId}
-            movementTitle={movementTitle}
-            onSuccess={onSuccess}
-            onClose={onClose}
-          />
-        </Elements>
+        <DonationForm
+          movementId={movementId}
+          movementTitle={movementTitle}
+          onSuccess={onSuccess}
+          onClose={onClose}
+        />
       </DialogContent>
     </Dialog>
   );
