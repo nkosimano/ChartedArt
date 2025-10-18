@@ -178,9 +178,22 @@ export default function CreatePage() {
 
       // Add item directly to cart_items - no parent carts table needed
       // TODO: Once S3 upload Lambda is deployed, upload image first and use the S3 URL
-      const imageUrl = imagePath || 'pending-upload';
+      // For now, use a placeholder URL format that passes validation
+      const imageUrl = imagePath 
+        ? `https://chartedart-user-uploads-311964231104.s3.amazonaws.com/${imagePath}`
+        : 'https://chartedart-user-uploads-311964231104.s3.amazonaws.com/pending-upload.jpg';
       
-      const { error: itemError } = await supabase
+      console.log('Adding to cart with data:', {
+        user_id: session.user.id,
+        image_url: imageUrl,
+        name: `Custom Print - ${selectedSize.name}`,
+        size: selectedSize.id,
+        frame: selectedFrame.id,
+        price: totalPrice,
+        quantity: 1
+      });
+
+      const { data, error: itemError } = await supabase
         .from('cart_items')
         .insert([{
           user_id: session.user.id,
@@ -190,9 +203,15 @@ export default function CreatePage() {
           frame: selectedFrame.id,
           price: totalPrice,
           quantity: 1
-        }]);
+        }])
+        .select();
 
-      if (itemError) throw itemError;
+      if (itemError) {
+        console.error('Cart insert error:', itemError);
+        throw itemError;
+      }
+      
+      console.log('Successfully added to cart:', data);
 
       navigate('/cart');
     } catch (err) {
