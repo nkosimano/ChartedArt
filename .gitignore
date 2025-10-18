@@ -71,6 +71,10 @@ ehthumbs.db
 *.pem
 *.key
 
+# AWS and Infrastructure Scripts
+setup-s3.ps1
+backend/.env.backend
+
 # Optional IDE files
 .idea
 .project

@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
 import { Upload, Frame, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { api, APIError } from "@/lib/api/client";
-import { uploadFileSecurely } from "@/lib/utils/file-upload";
 import { useNavigate } from "react-router-dom";
 
 const SIZES = [
@@ -80,30 +78,30 @@ export default function CreatePage() {
         return;
       }
 
-      // Step 1: Get presigned URL from backend
-      console.log('Requesting presigned URL for file upload...');
+      // Upload to S3 (when backend is deployed) or use local preview
+      console.log('Preparing file upload...');
       try {
-        const { uploadUrl, fileKey } = await api.uploads.generateUrl(
-          file.name,
-          file.type,
-          file.size
-        );
+        // Generate unique file key for S3
+        const timestamp = Date.now();
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const fileKey = `uploads/${session.user.id}/${timestamp}-${sanitizedFileName}`;
 
-        // Step 2: Upload file directly to S3
-        console.log('Uploading file to S3...');
-        await api.uploads.uploadFile(file, uploadUrl);
+        // TODO: When backend is deployed, use this:
+        // const { uploadUrl, publicUrl } = await getPresignedUploadUrl(file.name, file.type);
+        // await uploadToS3(file, uploadUrl);
+        // setImage(publicUrl);
+        // setImagePath(fileKey);
 
-        // Step 3: Store file key for later use
-        console.log('File uploaded successfully');
-        
-        // For now, construct a temporary URL (in production, use CloudFront or signed URLs)
+        // For now: Use local preview until backend is deployed
+        console.log('Backend not deployed yet, using local preview');
         const tempUrl = URL.createObjectURL(file);
-        
         setImage(tempUrl);
-        setImagePath(fileKey);
+        setImagePath(fileKey); // Store the key for when we upload later
+        
+        console.log('File ready for upload:', fileKey);
       } catch (uploadError) {
-        // Fallback to local preview if upload fails
-        console.warn('Upload failed, using local preview:', uploadError);
+        // Fallback to local preview if anything fails
+        console.warn('Upload preparation failed, using local preview:', uploadError);
         const tempUrl = URL.createObjectURL(file);
         setImage(tempUrl);
         setImagePath(null);
@@ -111,26 +109,13 @@ export default function CreatePage() {
       
     } catch (err) {
       console.error('File upload error:', err);
-      
-      if (err instanceof APIError) {
-        if (err.status === 401) {
-          setError('Please log in to upload files.');
-          navigate('/auth/login');
-        } else if (err.status === 400) {
-          setError(err.message);
-        } else {
-          setError('Failed to upload file. Please try again.');
-        }
-      } else {
-        setError(err instanceof Error ? err.message : 'An error occurred while uploading');
-      }
-      
+      setError(err instanceof Error ? err.message : 'An error occurred while uploading');
       setImage(null);
       setImagePath(null);
     } finally {
       setUploading(false);
     }
-  }, [navigate, selectedSize.minPixels]);
+  }, [navigate, selectedSize.minPixels, selectedSize.name]);
 
   const handleRemoveImage = useCallback(async () => {
     if (!imagePath) return;
