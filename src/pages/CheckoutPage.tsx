@@ -7,7 +7,7 @@ import { CreditCard, Wallet } from 'lucide-react';
 import type { Database } from '@/lib/supabase/types';
 
 type CartItem = Database['public']['Tables']['cart_items']['Row'] & {
-  products: Database['public']['Tables']['products']['Row']
+  products: Database['public']['Tables']['products']['Row'] | null
 };
 
 type ShippingAddress = {
@@ -47,10 +47,13 @@ export default function CheckoutPage() {
 
         setEmail(session.user.email || '');
 
-        // Query cart_items directly - no parent carts table needed
+        // Query cart_items with products join (LEFT JOIN for custom prints)
         const { data: cartItems, error: itemsError } = await supabase
           .from('cart_items')
-          .select('*')
+          .select(`
+            *,
+            products (id, name, price, image_url, artist_id)
+          `)
           .eq('user_id', session.user.id);
 
         if (itemsError) throw itemsError;
@@ -85,19 +88,28 @@ export default function CheckoutPage() {
 
       // CRITICAL: Revalidate cart items before placing order
       console.log('Validating cart items...');
-      const productIds = items.map(item => item.product_id);
-      const { data: currentProducts, error: productsError } = await supabase
-        .from('products')
-        .select('id, name, price, stock_quantity, available')
-        .in('id', productIds);
+      
+      // Filter out custom prints (they don't need product validation)
+      const regularItems = items.filter(item => item.product_id);
+      const productIds = regularItems.map(item => item.product_id);
+      
+      // Only query products if there are regular items
+      let currentProducts: any[] = [];
+      if (productIds.length > 0) {
+        const { data, error: productsError } = await supabase
+          .from('products')
+          .select('id, name, price, stock_quantity, available')
+          .in('id', productIds);
 
-      if (productsError) {
-        throw new Error('Failed to validate cart items. Please try again.');
+        if (productsError) {
+          throw new Error('Failed to validate cart items. Please try again.');
+        }
+        currentProducts = data || [];
       }
 
-      // Check each item in cart
+      // Check each regular item in cart (skip custom prints)
       const validationErrors: string[] = [];
-      for (const cartItem of items) {
+      for (const cartItem of regularItems) {
         const currentProduct = currentProducts?.find(p => p.id === cartItem.product_id);
         
         if (!currentProduct) {
@@ -135,16 +147,33 @@ export default function CheckoutPage() {
         );
       }
 
-      // Prepare order data
+      // Prepare order data (handle both regular products and custom prints)
       const orderData = {
-        items: items.map(item => ({
-          product_id: item.product_id,
-          quantity: item.quantity || 1,
-          customization: {
-            image_url: item.image_url,
-            price: item.price
+        items: items.map(item => {
+          const isCustomPrint = !item.product_id;
+          
+          if (isCustomPrint) {
+            // Custom print - include all custom fields
+            return {
+              product_id: null,
+              quantity: item.quantity || 1,
+              customization: {
+                image_url: item.image_url,
+                name: item.name,
+                size: item.size,
+                frame: item.frame,
+                price: item.price
+              }
+            };
+          } else {
+            // Regular product
+            return {
+              product_id: item.product_id,
+              quantity: item.quantity || 1,
+              customization: null
+            };
           }
-        })),
+        }),
         shipping_address: {
           street: address.street,
           city: address.city,
@@ -308,21 +337,32 @@ export default function CheckoutPage() {
             <h2 className="text-2xl font-semibold mb-6">Order Summary</h2>
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <div className="space-y-4 mb-6">
-                {items.map((item) => (
-                  <div key={item.id} className="flex justify-between">
-                    <div>
+                {items.map((item) => {
+                  const isCustomPrint = !item.product_id;
+                  const displayName = isCustomPrint ? item.name : item.products?.name;
+                  const displaySize = isCustomPrint ? item.size : item.products?.size;
+                  const displayFrame = isCustomPrint ? item.frame : item.products?.frame_type;
+                  
+                  return (
+                    <div key={item.id} className="flex justify-between">
+                      <div>
+                        <p className="font-semibold">
+                          {displayName || 'Unknown Item'}
+                        </p>
+                        <p className="text-sm text-charcoal-200">
+                          {displaySize && `Size: ${displaySize}`}
+                          {displayFrame && ` • Frame: ${displayFrame}`}
+                        </p>
+                        <p className="text-sm text-charcoal-200">
+                          Quantity: {item.quantity}
+                        </p>
+                      </div>
                       <p className="font-semibold">
-                        {item.products.size} - {item.products.frame_type} Frame
-                      </p>
-                      <p className="text-sm text-charcoal-200">
-                        Quantity: {item.quantity}
+                        R{(item.price * (item.quantity || 1)).toFixed(2)}
                       </p>
                     </div>
-                    <p className="font-semibold">
-                      R{(item.price * (item.quantity || 1)).toFixed(2)}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="border-t pt-4">

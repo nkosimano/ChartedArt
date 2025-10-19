@@ -117,7 +117,7 @@ export const api = {
      */
     create: async (orderData: {
       items: Array<{
-        product_id: string;
+        product_id: string | null; // Allow null for custom prints
         quantity: number;
         customization?: any;
       }>;
