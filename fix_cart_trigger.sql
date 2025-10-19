@@ -1,7 +1,7 @@
 -- Quick Fix: Apply this in Supabase SQL Editor
 -- URL: https://supabase.com/dashboard/project/uuqfobbkjhrpylygauwf/sql/new
 
--- Fix cart_sessions trigger - remove session_id column reference
+-- FIX 1: Update cart_sessions trigger - remove session_id column reference
 CREATE OR REPLACE FUNCTION update_cart_session()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -28,3 +28,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- FIX 2: Add missing RLS policy for cart_sessions
+DROP POLICY IF EXISTS "Users can manage own cart session" ON cart_sessions;
+CREATE POLICY "Users can manage own cart session" 
+  ON cart_sessions FOR ALL 
+  USING (auth.uid() = user_id);

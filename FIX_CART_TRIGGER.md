@@ -1,24 +1,32 @@
-# URGENT FIX: Cart Insert Error
+# URGENT FIX: Cart Insert Errors
 
 ## Problem
-Error when adding items to cart:
-```
-column "session_id" of relation "cart_sessions" does not exist
-```
+Two errors when adding items to cart:
+1. ❌ `column "session_id" of relation "cart_sessions" does not exist`
+2. ❌ `new row violates row-level security policy for table "cart_sessions"` (403 Forbidden)
 
-## Root Cause
-The `update_cart_session()` trigger function is trying to insert a `session_id` column that doesn't exist in the `cart_sessions` table.
+## Root Causes
+1. The `update_cart_session()` trigger function is trying to insert a `session_id` column that doesn't exist
+2. The `cart_sessions` table has RLS enabled but NO policies defined
 
-## Solution
+## Solution (Respecting Migration Guardrails ✅)
 
-### Option 1: Apply via Supabase Dashboard (RECOMMENDED - Fast)
+### Changes Made to EXISTING Migration Files:
+- ✅ **01800_triggers.sql** - Fixed `update_cart_session()` function
+- ✅ **01500_rls_policies.sql** - Added missing cart_sessions RLS policy
+- ❌ **00201_fix_cart_session_trigger.sql** - DELETED (violated guardrails)
 
-1. Go to: https://supabase.com/dashboard/project/uuqfobbkjhrpylygauwf/sql/new
+---
 
-2. Copy and paste this SQL:
+## Apply This Fix NOW:
+
+### Go to Supabase SQL Editor:
+https://supabase.com/dashboard/project/uuqfobbkjhrpylygauwf/sql/new
+
+### Copy & Paste this SQL:
 
 ```sql
--- Fix cart_sessions trigger - remove session_id column reference
+-- FIX 1: Update cart_sessions trigger - remove session_id column reference
 CREATE OR REPLACE FUNCTION update_cart_session()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -45,21 +53,17 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- FIX 2: Add missing RLS policy for cart_sessions
+DROP POLICY IF EXISTS "Users can manage own cart session" ON cart_sessions;
+CREATE POLICY "Users can manage own cart session" 
+  ON cart_sessions FOR ALL 
+  USING (auth.uid() = user_id);
 ```
 
-3. Click "Run" button
+### Click "RUN" button
 
-4. You should see: "Success. No rows returned"
-
-### Option 2: Apply via Supabase CLI
-
-```bash
-# Make sure you're in the project root
-cd c:\Users\nathi\OneDrive\Documents\Projects\ChartedArt
-
-# Apply the migration
-supabase db push --include-all
-```
+### Should see: "Success. No rows returned"
 
 ## What Changed
 

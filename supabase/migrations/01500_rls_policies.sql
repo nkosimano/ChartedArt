@@ -124,6 +124,9 @@ CREATE POLICY "Users can view own order items" ON order_items FOR SELECT
 -- Cart Items: Users manage their own cart
 CREATE POLICY "Users can manage own cart" ON cart_items FOR ALL USING (auth.uid() = user_id);
 
+-- Cart Sessions: Users manage their own cart session (automatically managed by trigger)
+CREATE POLICY "Users can manage own cart session" ON cart_sessions FOR ALL USING (auth.uid() = user_id);
+
 -- Testimonials: Public read approved, users manage their own
 CREATE POLICY "Anyone can view approved testimonials" ON testimonials FOR SELECT USING (is_approved = true);
 CREATE POLICY "Users can create testimonials" ON testimonials FOR INSERT WITH CHECK (auth.uid() = user_id);
