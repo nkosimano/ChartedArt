@@ -35,7 +35,7 @@ export default function CartPage() {
               id,
               name,
               price,
-              images,
+              image_url,
               artist_id
             )
           `)
@@ -128,7 +128,7 @@ export default function CartPage() {
                   : item.products?.name || 'Product';
                 const displayImage = isCustomPrint
                   ? item.image_url
-                  : (item.products?.images?.[0] || item.image_url);
+                  : (item.products?.image_url || item.image_url);
                 
                 return (
                   <div key={item.id} className="bg-white p-6 rounded-lg shadow-sm">
