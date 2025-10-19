@@ -29,7 +29,16 @@ export default function CartPage() {
         // Query cart_items directly - no parent carts table needed
         const { data: cartItems, error: itemsError } = await supabase
           .from('cart_items')
-          .select('*')
+          .select(`
+            *,
+            products (
+              id,
+              name,
+              price,
+              images,
+              artist_id
+            )
+          `)
           .eq('user_id', session.user.id);
 
         if (itemsError) throw itemsError;
@@ -111,29 +120,44 @@ export default function CartPage() {
         ) : (
           <>
             <div className="space-y-6 mb-8">
-              {items.map((item) => (
-                <div key={item.id} className="bg-white p-6 rounded-lg shadow-sm">
-                  <div className="flex items-center gap-6">
-                    <div className="w-24 h-24 flex-shrink-0">
-                      <img
-                        src={item.image_url}
-                        alt="Product preview"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    </div>
-                    <div className="flex-grow">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold mb-1">
-                            {item.products.size} - {item.products.frame_type} Frame
-                          </h3>
-                          <p className="text-charcoal-300">
-                            Quantity: {item.quantity}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">R{item.price.toFixed(2)}</p>
-                          <button
+              {items.map((item) => {
+                // Handle custom prints vs regular products
+                const isCustomPrint = !item.product_id;
+                const displayName = isCustomPrint 
+                  ? item.name 
+                  : item.products?.name || 'Product';
+                const displayImage = isCustomPrint
+                  ? item.image_url
+                  : (item.products?.images?.[0] || item.image_url);
+                
+                return (
+                  <div key={item.id} className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="flex items-center gap-6">
+                      <div className="w-24 h-24 flex-shrink-0">
+                        <img
+                          src={displayImage}
+                          alt="Product preview"
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                      <div className="flex-grow">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold mb-1">
+                              {displayName}
+                            </h3>
+                            {isCustomPrint && (
+                              <p className="text-sm text-charcoal-300">
+                                Size: {item.size} | Frame: {item.frame}
+                              </p>
+                            )}
+                            <p className="text-charcoal-300">
+                              Quantity: {item.quantity}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">R{item.price.toFixed(2)}</p>
+                            <button
                             onClick={() => handleRemoveItem(item.id)}
                             disabled={deletingItems.has(item.id)}
                             className="text-red-500 hover:text-red-600 mt-2 disabled:opacity-50"
@@ -149,7 +173,8 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="bg-white p-8 rounded-lg shadow-sm">
