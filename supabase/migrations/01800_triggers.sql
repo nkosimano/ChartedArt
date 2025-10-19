@@ -295,16 +295,15 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  INSERT INTO cart_sessions (user_id, session_id, status, last_activity, item_count, total_value)
+  INSERT INTO cart_sessions (user_id, status, last_activity, item_count, total_value)
   SELECT 
     NEW.user_id,
-    gen_random_uuid(),
     'active',
     NOW(),
     COUNT(*),
-    SUM(p.price * ci.quantity)
+    COALESCE(SUM(COALESCE(p.price, ci.price, 0) * ci.quantity), 0)
   FROM cart_items ci
-  JOIN products p ON p.id = ci.product_id
+  LEFT JOIN products p ON p.id = ci.product_id
   WHERE ci.user_id = NEW.user_id
   GROUP BY ci.user_id
   ON CONFLICT (user_id)
